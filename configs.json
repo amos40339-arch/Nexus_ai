@@ -1,0 +1,12 @@
+{
+  "ae_intelligence": {
+    "business_name": "AE Intelligence.",
+    "google_sheet_id": "PENDING",
+    "manager_whatsapp": "07081119891",
+    "twilio_sid": "TEST",
+    "twilio_token": "TEST",
+    "twilio_from": "TEST",
+    "verify_token": "nexus_ae_intelligence_token",
+    "report_time": "8;00am"
+  }
+}
