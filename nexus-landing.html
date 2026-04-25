@@ -4,1071 +4,1111 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Nexus AI — The AI Sales Operator That Never Sleeps</title>
-<meta name="description" content="Stop losing high-intent leads to slow response times. Nexus AI qualifies, scores, and closes leads 24/7 for luxury brands and high-ticket businesses.">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<meta name="description" content="Stop losing high-intent leads to slow response times. Nexus AI qualifies, scores, and closes leads 24/7.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400;1,600;1,700&family=Outfit:wght@300;400;500;600&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
 <style>
+/* ============================================================
+   NEXUS AI — EXCELLENCE EDITION
+   Aesthetic: Editorial Luxury Dark
+   Fonts: Cormorant Garamond (display) + Outfit (body) + Courier Prime (mono)
+   Palette: Obsidian + Warm Ivory + Liquid Gold
+============================================================ */
 :root {
-  --bg: #0A0A0A;
-  --surface: #111114;
-  --surface2: #16161a;
-  --border: #1e1e24;
-  --border2: #2a2a35;
-  --cyan: #00F0FF;
-  --cyan-dim: rgba(0,240,255,0.12);
-  --cyan-glow: rgba(0,240,255,0.35);
-  --text: #f0f0f5;
-  --muted: #5a5a72;
-  --muted2: #3a3a4a;
-  --white: #ffffff;
-  --font: 'Space Grotesk', sans-serif;
-  --mono: 'Space Mono', monospace;
+  --obsidian:   #070709;
+  --surface:    #0e0e12;
+  --surface2:   #141418;
+  --border:     #1f1f28;
+  --border2:    #2a2a35;
+  --ivory:      #F5F0E8;
+  --ivory2:     #DDD8CE;
+  --ivory3:     #A89F92;
+  --gold:       #C9973A;
+  --gold2:      #E8B84B;
+  --gold3:      #F5D080;
+  --gold-glow:  rgba(201,151,58,0.35);
+  --gold-soft:  rgba(201,151,58,0.12);
+  --gold-faint: rgba(201,151,58,0.05);
+  --navy:       #0A1628;
+  --red:        #C0392B;
+  --green:      #1D7A4F;
+
+  --disp: 'Cormorant Garamond', Georgia, serif;
+  --body: 'Outfit', sans-serif;
+  --mono: 'Courier Prime', 'Courier New', monospace;
 }
 
-*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-
-html { scroll-behavior: smooth; }
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior: smooth; font-size: 16px; }
 
 body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font);
+  background: var(--obsidian);
+  color: var(--ivory);
+  font-family: var(--body);
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+  cursor: default;
 }
 
-/* ── NOISE TEXTURE ── */
+/* ── GLOBAL ATMOSPHERE ────────────────────────────────── */
 body::before {
   content: '';
-  position: fixed;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  position: fixed; inset: 0; z-index: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(201,151,58,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 40% at 100% 80%, rgba(201,151,58,0.04) 0%, transparent 50%);
   pointer-events: none;
-  z-index: 0;
-  opacity: 0.4;
 }
 
-/* ── GRID ── */
+/* Grain overlay */
 body::after {
   content: '';
-  position: fixed;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(0,240,255,0.018) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,240,255,0.018) 1px, transparent 1px);
-  background-size: 60px 60px;
-  pointer-events: none;
-  z-index: 0;
+  position: fixed; inset: 0; z-index: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none; opacity: 0.6;
 }
 
-/* ── NAV ── */
+section, nav, footer { position: relative; z-index: 1; }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: var(--obsidian); }
+::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 2px; }
+
+/* ── NAV ───────────────────────────────────────────────── */
 nav {
-  position: fixed;
-  top: 0; left: 0; right: 0;
-  z-index: 100;
-  padding: 20px 24px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: rgba(10,10,10,0.85);
-  backdrop-filter: blur(16px);
+  position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+  height: 70px;
+  padding: 0 28px;
+  display: flex; align-items: center; justify-content: space-between;
+  background: rgba(7,7,9,0.88);
+  backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border);
 }
 
-.nav-logo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+nav::after {
+  content: '';
+  position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent 0%, var(--gold) 50%, transparent 100%);
+  opacity: 0.3;
+}
+
+.logo {
+  display: flex; align-items: center; gap: 12px;
   text-decoration: none;
 }
 
-.nav-logo svg { width: 32px; height: 32px; }
-
-.nav-wordmark {
-  font-size: 17px;
-  font-weight: 700;
-  letter-spacing: -0.3px;
-  color: var(--white);
+.logo-mark {
+  width: 36px; height: 36px;
+  position: relative;
 }
 
-.nav-wordmark span { color: var(--cyan); }
+.logo-mark svg { width: 100%; height: 100%; }
 
-.nav-cta {
-  background: var(--cyan);
-  color: #000;
+.logo-text { display: flex; flex-direction: column; }
+
+.logo-name {
+  font-family: var(--disp);
+  font-size: 20px; font-weight: 600;
+  color: var(--ivory); letter-spacing: 0.5px;
+  line-height: 1;
+}
+
+.logo-name span { color: var(--gold2); }
+
+.logo-sub {
   font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  padding: 10px 16px;
-  border-radius: 6px;
-  text-decoration: none;
-  transition: all 0.2s;
-  white-space: nowrap;
+  font-size: 8px; letter-spacing: 3px;
+  color: var(--ivory3); text-transform: uppercase;
+  margin-top: 2px;
 }
 
-.nav-cta:hover {
-  box-shadow: 0 0 20px var(--cyan-glow);
+.nav-right { display: flex; align-items: center; gap: 16px; }
+
+.nav-link {
+  font-size: 13px; font-weight: 400;
+  color: var(--ivory3); text-decoration: none;
+  transition: color 0.2s; display: none;
+}
+@media(min-width:600px) { .nav-link { display: block; } }
+.nav-link:hover { color: var(--gold2); }
+
+.nav-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--gold);
+  color: #000;
+  font-family: var(--body);
+  font-size: 12px; font-weight: 600;
+  padding: 10px 18px; border-radius: 4px;
+  text-decoration: none;
+  transition: all 0.25s;
+  box-shadow: 0 0 20px rgba(201,151,58,0.3);
+}
+
+.nav-btn:hover {
+  background: var(--gold2);
+  box-shadow: 0 0 35px rgba(201,151,58,0.5);
   transform: translateY(-1px);
 }
 
-/* ── SECTIONS ── */
-section { position: relative; z-index: 1; }
-
-.container {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 0 24px;
-}
-
-/* ── HERO ── */
+/* ── HERO ───────────────────────────────────────────────── */
 .hero {
   min-height: 100vh;
-  display: flex;
-  align-items: center;
-  padding: 120px 24px 80px;
-  position: relative;
-  overflow: hidden;
+  padding: 130px 28px 80px;
+  display: flex; align-items: center;
+  position: relative; overflow: hidden;
 }
 
-/* HERO GLOW */
-.hero::before {
-  content: '';
+/* Big glowing orb behind hero text */
+.hero-orb {
   position: absolute;
-  top: -200px;
-  left: 50%;
+  top: 10%; left: 50%;
   transform: translateX(-50%);
-  width: 800px;
-  height: 800px;
-  background: radial-gradient(circle, rgba(0,240,255,0.07) 0%, transparent 70%);
+  width: 600px; height: 600px;
+  background: radial-gradient(circle, rgba(201,151,58,0.09) 0%, transparent 65%);
   pointer-events: none;
+  animation: breathe 6s ease-in-out infinite;
 }
 
-.hero-inner {
-  max-width: 780px;
-  margin: 0 auto;
-  text-align: center;
+@keyframes breathe {
+  0%, 100% { transform: translateX(-50%) scale(1); opacity: 1; }
+  50%       { transform: translateX(-50%) scale(1.08); opacity: 0.7; }
 }
 
-.hero-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--cyan-dim);
-  border: 1px solid rgba(0,240,255,0.25);
-  border-radius: 30px;
-  padding: 6px 14px;
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 2px;
-  color: var(--cyan);
-  text-transform: uppercase;
+.hero-inner { max-width: 960px; margin: 0 auto; width: 100%; }
+
+.hero-kicker {
+  display: inline-flex; align-items: center; gap: 10px;
   margin-bottom: 32px;
 }
 
-.badge-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--cyan);
-  box-shadow: 0 0 6px var(--cyan);
-  animation: blink 2s infinite;
+.kicker-line { width: 36px; height: 1px; background: var(--gold); }
+
+.kicker-text {
+  font-family: var(--mono);
+  font-size: 11px; letter-spacing: 3px;
+  color: var(--gold2); text-transform: uppercase;
 }
 
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
+.kicker-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 8px var(--gold);
+  animation: pulse 2s infinite;
 }
+
+@keyframes pulse { 0%,100%{opacity:1;box-shadow:0 0 8px var(--gold)} 50%{opacity:.4;box-shadow:0 0 3px var(--gold)} }
 
 .hero-h1 {
-  font-size: clamp(32px, 6vw, 60px);
-  font-weight: 700;
-  line-height: 1.1;
-  letter-spacing: -1.5px;
-  color: var(--white);
-  margin-bottom: 12px;
+  font-family: var(--disp);
+  font-size: clamp(42px, 8vw, 86px);
+  font-weight: 300; line-height: 1.03;
+  letter-spacing: -1px; color: var(--ivory);
+  margin-bottom: 6px;
 }
 
-.hero-h1 .cyan { color: var(--cyan); }
+.hero-h1 .heavy { font-weight: 700; }
+.hero-h1 .italic { font-style: italic; color: var(--gold2); font-weight: 300; }
+
+.hero-divider {
+  display: flex; align-items: center; gap: 14px;
+  margin: 28px 0;
+}
+
+.h-div-line { flex: 1; max-width: 60px; height: 1px; background: var(--gold); opacity: 0.5; }
+.h-div-dia {
+  width: 6px; height: 6px;
+  background: var(--gold); transform: rotate(45deg);
+  box-shadow: 0 0 10px var(--gold);
+}
 
 .hero-sub {
-  font-size: clamp(16px, 2.5vw, 20px);
-  color: var(--muted);
-  line-height: 1.6;
-  max-width: 560px;
-  margin: 0 auto 40px;
-  font-weight: 400;
+  font-size: clamp(15px, 2.5vw, 18px);
+  color: var(--ivory3); line-height: 1.75;
+  max-width: 520px; font-weight: 300;
+  margin-bottom: 44px;
 }
 
-.hero-cta-group {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 64px;
+.hero-sub strong { color: var(--ivory); font-weight: 500; }
+
+.hero-actions {
+  display: flex; flex-direction: column; gap: 14px;
+  align-items: flex-start; margin-bottom: 64px;
 }
 
-.btn-glow {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  background: var(--cyan);
-  color: #000;
-  font-weight: 700;
-  font-size: 14px;
-  padding: 16px 28px;
-  border-radius: 8px;
-  text-decoration: none;
-  transition: all 0.3s;
-  box-shadow: 0 0 30px rgba(0,240,255,0.25);
-  width: 100%;
-  max-width: 320px;
-  justify-content: center;
+.btn-hero {
+  display: inline-flex; align-items: center; gap: 12px;
+  background: linear-gradient(135deg, var(--gold), var(--gold2));
+  color: #000; font-family: var(--body);
+  font-size: 15px; font-weight: 600;
+  padding: 17px 30px; border-radius: 4px;
+  text-decoration: none; transition: all 0.3s;
+  box-shadow: 0 4px 30px rgba(201,151,58,0.35), 0 0 0 1px rgba(201,151,58,0.2);
+  position: relative; overflow: hidden;
 }
 
-.btn-glow:hover {
-  box-shadow: 0 0 50px rgba(0,240,255,0.45);
-  transform: translateY(-2px);
-}
-
-.btn-ghost {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: transparent;
-  color: var(--muted);
-  font-size: 13px;
-  text-decoration: none;
-  transition: color 0.2s;
-}
-
-.btn-ghost:hover { color: var(--cyan); }
-
-/* HERO STATS */
-.hero-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1px;
-  background: var(--border);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.hero-stat {
-  background: var(--surface);
-  padding: 20px 16px;
-  text-align: center;
-}
-
-.hero-stat-val {
-  font-family: var(--mono);
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--cyan);
-  display: block;
-  margin-bottom: 4px;
-}
-
-.hero-stat-label {
-  font-size: 11px;
-  color: var(--muted);
-  line-height: 1.3;
-}
-
-/* ── SECTION SHARED ── */
-.section-pad { padding: 100px 0; }
-
-.section-tag {
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 3px;
-  color: var(--cyan);
-  text-transform: uppercase;
-  margin-bottom: 12px;
-  display: block;
-}
-
-.section-h2 {
-  font-size: clamp(26px, 4vw, 40px);
-  font-weight: 700;
-  letter-spacing: -1px;
-  color: var(--white);
-  line-height: 1.15;
-  margin-bottom: 16px;
-}
-
-.section-body {
-  font-size: 16px;
-  color: var(--muted);
-  line-height: 1.7;
-  max-width: 560px;
-}
-
-/* ── FEATURES ── */
-.features-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 16px;
-  margin-top: 56px;
-}
-
-.feature-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 28px;
-  position: relative;
-  overflow: hidden;
-  transition: border-color 0.3s, transform 0.3s;
-}
-
-.feature-card::before {
+.btn-hero::before {
   content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--cyan), transparent);
-  opacity: 0;
-  transition: opacity 0.3s;
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
+  opacity: 0; transition: opacity 0.3s;
 }
 
-.feature-card:hover {
-  border-color: rgba(0,240,255,0.3);
+.btn-hero:hover {
   transform: translateY(-3px);
+  box-shadow: 0 12px 50px rgba(201,151,58,0.5), 0 0 0 1px rgba(201,151,58,0.4);
 }
 
-.feature-card:hover::before { opacity: 1; }
+.btn-hero:hover::before { opacity: 1; }
 
-.feature-icon {
-  width: 44px;
-  height: 44px;
-  background: var(--cyan-dim);
-  border: 1px solid rgba(0,240,255,0.2);
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  margin-bottom: 18px;
+.btn-see {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--ivory3); font-size: 13px; font-weight: 400;
+  text-decoration: none; padding: 4px 0;
+  border-bottom: 1px solid var(--border2);
+  transition: all 0.2s;
 }
 
-.feature-title {
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--white);
-  margin-bottom: 8px;
-  letter-spacing: -0.3px;
-}
+.btn-see:hover { color: var(--gold2); border-color: var(--gold); }
 
-.feature-desc {
-  font-size: 14px;
-  color: var(--muted);
-  line-height: 1.65;
-}
-
-/* ── FUNNEL ── */
-.funnel-section { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
-
-.funnel-steps {
-  margin-top: 48px;
-  position: relative;
-}
-
-.funnel-steps::before {
-  content: '';
-  position: absolute;
-  left: 20px;
-  top: 0; bottom: 0;
-  width: 1px;
-  background: linear-gradient(to bottom, var(--cyan), transparent);
-}
-
-.funnel-step {
-  display: flex;
-  gap: 20px;
-  padding: 0 0 32px 0;
-  position: relative;
-}
-
-.funnel-step:last-child { padding-bottom: 0; }
-
-.step-num {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: var(--bg);
-  border: 1px solid var(--border2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--cyan);
-  font-weight: 700;
-  flex-shrink: 0;
-  position: relative;
-  z-index: 1;
-  transition: all 0.3s;
-}
-
-.funnel-step:hover .step-num {
-  background: var(--cyan-dim);
-  border-color: var(--cyan);
-  box-shadow: 0 0 14px var(--cyan-glow);
-}
-
-.step-content { padding-top: 8px; }
-
-.step-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--white);
-  margin-bottom: 4px;
-  letter-spacing: -0.2px;
-}
-
-.step-desc {
-  font-size: 13px;
-  color: var(--muted);
-  line-height: 1.6;
-}
-
-/* ── SMART VALIDATION ── */
-.validation-card {
-  background: var(--surface);
+/* HERO STAT CARDS */
+.hero-metrics {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 1px; background: var(--border);
   border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 32px 24px;
-  margin-top: 48px;
-  position: relative;
-  overflow: hidden;
+  border-radius: 10px; overflow: hidden;
 }
 
-.validation-card::before {
+.metric {
+  background: var(--surface);
+  padding: 22px 16px; text-align: center;
+  position: relative; transition: background 0.3s;
+}
+
+.metric::before {
   content: '';
-  position: absolute;
-  top: -60px; right: -60px;
-  width: 200px;
-  height: 200px;
-  background: radial-gradient(circle, rgba(0,240,255,0.06) 0%, transparent 70%);
+  position: absolute; top: 0; left: 50%;
+  transform: translateX(-50%);
+  width: 40px; height: 1px;
+  background: var(--gold);
+  box-shadow: 0 0 8px var(--gold);
 }
 
-.validation-pill {
-  display: inline-block;
-  background: rgba(255,60,60,0.12);
-  border: 1px solid rgba(255,60,60,0.25);
-  color: #ff6b6b;
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 1px;
-  padding: 4px 10px;
-  border-radius: 4px;
+.metric:hover { background: rgba(201,151,58,0.06); }
+
+.m-val {
+  font-family: var(--disp);
+  font-size: 30px; font-weight: 700;
+  color: var(--gold2); display: block;
+  margin-bottom: 4px; letter-spacing: -0.5px;
+}
+
+.m-lbl { font-size: 11px; color: var(--ivory3); font-weight: 300; }
+
+/* ── SHARED SECTION ─────────────────────────────────────── */
+.section { padding: 90px 28px; }
+.section-alt { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.wrap { max-width: 960px; margin: 0 auto; }
+
+.sec-tag {
+  display: inline-flex; align-items: center; gap: 10px;
   margin-bottom: 16px;
 }
 
-.validation-title {
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--white);
-  letter-spacing: -0.5px;
-  margin-bottom: 12px;
-  line-height: 1.2;
+.tag-line { width: 24px; height: 1px; background: var(--gold); }
+.tag-text {
+  font-family: var(--mono); font-size: 10px;
+  letter-spacing: 3px; color: var(--gold);
+  text-transform: uppercase;
 }
 
-.validation-body {
-  font-size: 14px;
-  color: var(--muted);
-  line-height: 1.7;
+.sec-h2 {
+  font-family: var(--disp);
+  font-size: clamp(30px, 5vw, 52px);
+  font-weight: 300; letter-spacing: -0.5px;
+  color: var(--ivory); line-height: 1.12;
+  margin-bottom: 14px;
+}
+
+.sec-h2 .bold { font-weight: 700; }
+.sec-h2 .italic { font-style: italic; color: var(--gold2); }
+.sec-h2.light { color: var(--ivory); }
+
+.sec-rule {
+  width: 48px; height: 1px;
+  background: linear-gradient(90deg, var(--gold), transparent);
+  margin: 20px 0 30px;
+}
+
+.sec-body {
+  font-size: 16px; color: var(--ivory3);
+  line-height: 1.8; max-width: 520px; font-weight: 300;
+}
+
+/* ── GLOW CARDS ─────────────────────────────────────────── */
+.cards-grid {
+  display: grid; grid-template-columns: 1fr;
+  gap: 18px; margin-top: 52px;
+}
+
+.glow-card {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: 14px; padding: 32px 28px;
+  position: relative; overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  cursor: default;
+}
+
+/* Inner glow from top */
+.glow-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent 0%, var(--gold) 50%, transparent 100%);
+  opacity: 0.5; transition: opacity 0.4s;
+}
+
+/* Radial light blob on hover */
+.glow-card::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(circle at 50% 0%, rgba(201,151,58,0.08) 0%, transparent 60%);
+  opacity: 0; transition: opacity 0.4s;
+}
+
+.glow-card:hover {
+  border-color: rgba(201,151,58,0.4);
+  transform: translateY(-4px);
+  box-shadow:
+    0 8px 40px rgba(201,151,58,0.12),
+    0 0 0 1px rgba(201,151,58,0.15),
+    inset 0 1px 0 rgba(201,151,58,0.2);
+}
+
+.glow-card:hover::before { opacity: 1; }
+.glow-card:hover::after  { opacity: 1; }
+
+.card-num {
+  font-family: var(--mono); font-size: 10px;
+  letter-spacing: 2px; color: var(--gold);
+  text-transform: uppercase; margin-bottom: 16px;
+  display: flex; align-items: center; gap: 8px;
+}
+
+.card-num::after {
+  content: '';
+  flex: 1; max-width: 30px; height: 1px;
+  background: var(--gold); opacity: 0.4;
+}
+
+.card-icon {
+  font-size: 28px; margin-bottom: 14px;
+  display: block; filter: drop-shadow(0 0 8px rgba(201,151,58,0.4));
+}
+
+.card-title {
+  font-family: var(--disp);
+  font-size: 22px; font-weight: 700;
+  color: var(--ivory); margin-bottom: 10px;
+  letter-spacing: -0.3px; line-height: 1.2;
+}
+
+.card-body {
+  font-size: 14px; color: var(--ivory3);
+  line-height: 1.75; font-weight: 300;
+}
+
+/* ── FUNNEL ─────────────────────────────────────────────── */
+.funnel {
+  margin-top: 52px;
+  display: grid; grid-template-columns: 1fr;
+  border: 1px solid var(--border);
+  border-radius: 14px; overflow: hidden;
+}
+
+.f-row {
+  display: flex; align-items: stretch;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface); transition: all 0.25s;
+  position: relative;
+}
+
+.f-row:last-child { border-bottom: none; }
+
+.f-row::after {
+  content: '';
+  position: absolute; left: 0; top: 0; bottom: 0; width: 2px;
+  background: var(--gold); opacity: 0;
+  transition: opacity 0.3s;
+  box-shadow: 0 0 8px var(--gold);
+}
+
+.f-row:hover { background: rgba(201,151,58,0.04); }
+.f-row:hover::after { opacity: 1; }
+
+.f-num {
+  font-family: var(--disp);
+  font-size: 34px; font-weight: 700;
+  color: var(--border2);
+  padding: 22px 18px; min-width: 70px;
+  text-align: center; display: flex;
+  align-items: center; justify-content: center;
+  border-right: 1px solid var(--border);
+  transition: color 0.3s; line-height: 1;
+  flex-shrink: 0;
+}
+
+.f-row:hover .f-num { color: var(--gold); text-shadow: 0 0 20px rgba(201,151,58,0.4); }
+
+.f-content { padding: 22px 20px; }
+
+.f-title {
+  font-family: var(--disp);
+  font-size: 17px; font-weight: 700;
+  color: var(--ivory); margin-bottom: 5px;
+}
+
+.f-desc { font-size: 13px; color: var(--ivory3); line-height: 1.65; font-weight: 300; }
+
+/* TERMINAL */
+.terminal {
+  background: #08080c;
+  border: 1px solid var(--border2);
+  border-radius: 12px; overflow: hidden;
+  margin-top: 40px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 0 1px rgba(201,151,58,0.08);
+}
+
+.t-bar {
+  background: #111116;
+  border-bottom: 1px solid var(--border);
+  padding: 12px 16px;
+  display: flex; align-items: center; gap: 8px;
+}
+
+.td { width: 11px; height: 11px; border-radius: 50%; }
+.td-r{background:#ff5f57}.td-y{background:#ffbd2e}.td-g{background:#28c840}
+
+.t-title {
+  font-family: var(--mono); font-size: 10px;
+  color: #444; letter-spacing: 1px; margin-left: 8px;
+}
+
+.t-body {
+  padding: 22px 20px;
+  font-family: var(--mono); font-size: 12px; line-height: 2.1;
+}
+
+.tc  { color: #2e2e40; }
+.tk  { color: #7a8aaa; }
+.tv  { color: #ccc; }
+.tg  { color: #4ece8a; }
+.tgo { color: var(--gold3); }
+.tr  { color: #e07070; }
+
+/* ── VALIDATION ─────────────────────────────────────────── */
+.val-wrap {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 14px; overflow: hidden;
+  margin-top: 44px;
+  box-shadow: 0 0 0 1px rgba(201,151,58,0.06);
+  position: relative;
+}
+
+.val-wrap::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  opacity: 0.5;
+}
+
+.val-head {
+  background: linear-gradient(135deg, #0e1420 0%, #0a0d18 100%);
+  padding: 32px 28px;
+  border-bottom: 1px solid var(--border);
+}
+
+.val-tag {
+  font-family: var(--mono); font-size: 9px;
+  letter-spacing: 2.5px; color: var(--gold);
+  text-transform: uppercase; opacity: 0.8;
+  display: block; margin-bottom: 10px;
+}
+
+.val-title {
+  font-family: var(--disp);
+  font-size: 22px; font-weight: 700;
+  color: var(--ivory); line-height: 1.3;
+}
+
+.val-body-wrap { padding: 28px; }
+
+.val-text {
+  font-size: 15px; color: var(--ivory3);
+  line-height: 1.8; font-weight: 300;
   margin-bottom: 24px;
 }
 
-.validation-checks {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+.checks { display: flex; flex-direction: column; gap: 12px; }
+
+.chk {
+  display: flex; align-items: flex-start;
+  gap: 12px; font-size: 14px; color: var(--ivory2);
+  line-height: 1.5; font-weight: 300;
 }
 
-.check-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 13px;
-  color: var(--text);
+.chk-icon {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: rgba(29,122,79,0.2);
+  border: 1px solid rgba(29,122,79,0.4);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-top: 1px;
 }
 
-.check-icon {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: rgba(0,240,255,0.1);
-  border: 1px solid rgba(0,240,255,0.3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  flex-shrink: 0;
-  color: var(--cyan);
-}
+.chk-icon svg { width: 10px; height: 10px; stroke: #4ece8a; stroke-width: 2.5; fill: none; }
 
-/* ── DEALER SECTION ── */
+/* ── DEALER ─────────────────────────────────────────────── */
 .dealer-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
-  margin-top: 40px;
+  display: grid; grid-template-columns: 1fr;
+  gap: 16px; margin-top: 44px;
 }
 
-.dealer-card {
+.d-card {
   background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 22px;
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  transition: border-color 0.3s;
+  border: 1px solid var(--border2);
+  border-radius: 12px; padding: 24px 22px;
+  display: flex; gap: 18px; align-items: flex-start;
+  transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  position: relative; overflow: hidden;
 }
 
-.dealer-card:hover { border-color: rgba(0,240,255,0.3); }
-
-.dealer-icon {
-  font-size: 24px;
-  flex-shrink: 0;
-  width: 48px;
-  height: 48px;
-  background: var(--cyan-dim);
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.dealer-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--white);
-  margin-bottom: 4px;
-}
-
-.dealer-desc {
-  font-size: 13px;
-  color: var(--muted);
-  line-height: 1.6;
-}
-
-/* ── STATS STRIP ── */
-.stats-strip {
-  background: var(--surface);
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  padding: 60px 0;
-}
-
-.stats-row {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1px;
-  background: var(--border);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  overflow: hidden;
-}
-
-.stat-item {
-  background: var(--surface);
-  padding: 28px 20px;
-  text-align: center;
-}
-
-.stat-num {
-  font-family: var(--mono);
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--cyan);
-  display: block;
-  margin-bottom: 6px;
-  text-shadow: 0 0 20px var(--cyan-glow);
-}
-
-.stat-lbl {
-  font-size: 12px;
-  color: var(--muted);
-  line-height: 1.4;
-}
-
-/* ── CTA SECTION ── */
-.cta-section {
-  padding: 100px 0;
-  text-align: center;
-  position: relative;
-  overflow: hidden;
-}
-
-.cta-section::before {
+.d-card::before {
   content: '';
-  position: absolute;
-  bottom: -100px;
-  left: 50%;
+  position: absolute; inset: 0;
+  background: radial-gradient(circle at 20% 50%, rgba(201,151,58,0.06) 0%, transparent 60%);
+  opacity: 0; transition: opacity 0.4s;
+}
+
+.d-card:hover {
+  border-color: rgba(201,151,58,0.35);
+  transform: translateX(5px);
+  box-shadow: 0 4px 24px rgba(201,151,58,0.1), -4px 0 0 var(--gold);
+}
+
+.d-card:hover::before { opacity: 1; }
+
+.d-icon-wrap {
+  width: 46px; height: 46px; flex-shrink: 0;
+  background: var(--gold-soft);
+  border: 1px solid rgba(201,151,58,0.25);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+  box-shadow: 0 0 16px rgba(201,151,58,0.1);
+}
+
+.d-title {
+  font-family: var(--disp);
+  font-size: 17px; font-weight: 700;
+  color: var(--ivory); margin-bottom: 6px;
+}
+
+.d-body {
+  font-size: 13px; color: var(--ivory3);
+  line-height: 1.7; font-weight: 300;
+}
+
+/* ── STATS DARK ─────────────────────────────────────────── */
+.stats-sec {
+  background: var(--obsidian);
+  padding: 80px 28px;
+  border-top: 1px solid var(--border);
+  position: relative; overflow: hidden;
+}
+
+.stats-sec::before {
+  content: '';
+  position: absolute; top: -100px; left: 50%;
   transform: translateX(-50%);
-  width: 600px;
-  height: 600px;
-  background: radial-gradient(circle, rgba(0,240,255,0.06) 0%, transparent 65%);
+  width: 800px; height: 400px;
+  background: radial-gradient(ellipse, rgba(201,151,58,0.06) 0%, transparent 65%);
   pointer-events: none;
 }
 
-.cta-h2 {
-  font-size: clamp(28px, 5vw, 48px);
-  font-weight: 700;
-  letter-spacing: -1.5px;
-  color: var(--white);
-  line-height: 1.1;
-  margin-bottom: 16px;
+.stat-grid {
+  display: grid; grid-template-columns: repeat(2,1fr);
+  gap: 1px; background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 14px; overflow: hidden;
+  margin-top: 44px;
 }
 
-.cta-h2 span { color: var(--cyan); }
+.s-item {
+  background: var(--surface);
+  padding: 32px 20px; text-align: center;
+  position: relative; transition: background 0.3s;
+  overflow: hidden;
+}
+
+.s-item::before {
+  content: '';
+  position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 60%; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  opacity: 0; transition: opacity 0.3s;
+}
+
+.s-item:hover { background: rgba(201,151,58,0.05); }
+.s-item:hover::before { opacity: 0.6; }
+
+.s-big {
+  font-family: var(--disp);
+  font-size: 42px; font-weight: 700;
+  color: var(--gold2); display: block;
+  margin-bottom: 6px; letter-spacing: -2px;
+  text-shadow: 0 0 30px rgba(232,184,75,0.3);
+}
+
+.s-sm {
+  font-size: 12px; color: var(--ivory3);
+  font-weight: 300; line-height: 1.4;
+}
+
+/* ── CTA SECTION ────────────────────────────────────────── */
+.cta-sec {
+  padding: 100px 28px;
+  text-align: center;
+  position: relative; overflow: hidden;
+}
+
+.cta-orb {
+  position: absolute; bottom: -100px; left: 50%;
+  transform: translateX(-50%);
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(201,151,58,0.08) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+.cta-h {
+  font-family: var(--disp);
+  font-size: clamp(32px, 6vw, 58px);
+  font-weight: 300; letter-spacing: -1px;
+  color: var(--ivory); line-height: 1.1;
+  margin-bottom: 14px;
+}
+
+.cta-h .bold { font-weight: 700; }
+.cta-h .italic { font-style: italic; color: var(--gold2); }
+
+.cta-rule {
+  width: 40px; height: 1px;
+  background: var(--gold);
+  box-shadow: 0 0 8px var(--gold);
+  margin: 22px auto;
+}
 
 .cta-sub {
-  font-size: 16px;
-  color: var(--muted);
-  margin-bottom: 40px;
-  line-height: 1.6;
+  font-size: 16px; color: var(--ivory3);
+  line-height: 1.75; max-width: 460px;
+  margin: 0 auto 40px; font-weight: 300;
 }
 
 .cta-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  background: var(--cyan);
-  color: #000;
-  font-weight: 700;
-  font-size: 15px;
-  padding: 18px 32px;
-  border-radius: 8px;
-  text-decoration: none;
-  transition: all 0.3s;
-  box-shadow: 0 0 40px rgba(0,240,255,0.3);
+  display: inline-flex; align-items: center; gap: 12px;
+  background: linear-gradient(135deg, var(--gold), var(--gold2));
+  color: #000; font-size: 15px; font-weight: 600;
+  padding: 18px 34px; border-radius: 4px;
+  text-decoration: none; transition: all 0.3s;
+  box-shadow: 0 4px 30px rgba(201,151,58,0.4), 0 0 0 1px rgba(201,151,58,0.2);
+  position: relative; overflow: hidden;
+}
+
+.cta-btn::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
+  opacity: 0; transition: opacity 0.3s;
 }
 
 .cta-btn:hover {
-  box-shadow: 0 0 60px rgba(0,240,255,0.5);
   transform: translateY(-3px);
+  box-shadow: 0 16px 50px rgba(201,151,58,0.55), 0 0 0 1px rgba(201,151,58,0.35);
 }
+
+.cta-btn:hover::before { opacity: 1; }
 
 .cta-note {
-  margin-top: 16px;
-  font-family: var(--mono);
-  font-size: 10px;
-  color: var(--muted2);
-  letter-spacing: 1px;
+  margin-top: 14px;
+  font-family: var(--mono); font-size: 9px;
+  letter-spacing: 2.5px; color: var(--border2);
+  text-transform: uppercase;
 }
 
-/* ── FOOTER ── */
+/* ── FOOTER ─────────────────────────────────────────────── */
 footer {
+  background: var(--surface);
   border-top: 1px solid var(--border);
-  padding: 32px 24px;
-  text-align: center;
-  position: relative;
-  z-index: 1;
+  padding: 40px 28px;
+  text-align: center; position: relative;
 }
 
-.footer-logo {
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--muted);
-  letter-spacing: 2px;
-  margin-bottom: 8px;
+footer::before {
+  content: '';
+  position: absolute; top: 0; left: 50%;
+  transform: translateX(-50%);
+  width: 200px; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  opacity: 0.5;
 }
 
-.footer-copy {
-  font-size: 12px;
-  color: var(--muted2);
+.f-logo {
+  font-family: var(--disp);
+  font-size: 22px; font-weight: 600;
+  color: var(--ivory); margin-bottom: 4px;
 }
 
-/* ── DIVIDER ── */
-.glow-divider {
+.f-logo span { color: var(--gold2); }
+
+.f-tag {
+  font-family: var(--mono); font-size: 9px;
+  letter-spacing: 3px; color: var(--gold);
+  text-transform: uppercase; margin-bottom: 14px;
+  opacity: 0.7;
+}
+
+.f-copy { font-size: 12px; color: var(--border2); font-weight: 300; }
+
+/* ── GOLD RULE ───────────────────────────────────────────── */
+.g-rule {
   height: 1px;
-  background: linear-gradient(90deg, transparent, var(--cyan), transparent);
-  opacity: 0.3;
-  margin: 0;
+  background: linear-gradient(90deg, transparent 0%, var(--gold) 50%, transparent 100%);
+  opacity: 0.2; position: relative; z-index: 1;
 }
 
-/* ── ANIMATIONS ── */
-.fade-up {
-  opacity: 0;
-  transform: translateY(24px);
-  transition: opacity 0.6s ease, transform 0.6s ease;
+/* ── ANIMATIONS ─────────────────────────────────────────── */
+.reveal {
+  opacity: 0; transform: translateY(28px);
+  transition: opacity 0.7s cubic-bezier(0.25,0.46,0.45,0.94),
+              transform 0.7s cubic-bezier(0.25,0.46,0.45,0.94);
 }
 
-.fade-up.visible {
-  opacity: 1;
-  transform: translateY(0);
-}
+.reveal.visible { opacity: 1; transform: none; }
 
-/* ── TERMINAL BLOCK ── */
-.terminal {
-  background: #0d0d10;
-  border: 1px solid var(--border2);
-  border-radius: 10px;
-  padding: 20px;
-  margin-top: 32px;
-  font-family: var(--mono);
-  font-size: 12px;
-  line-height: 1.8;
-}
+.reveal-delay-1 { transition-delay: 0.1s; }
+.reveal-delay-2 { transition-delay: 0.2s; }
+.reveal-delay-3 { transition-delay: 0.3s; }
 
-.terminal-bar {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 16px;
-}
+/* Staggered card reveals */
+.cards-grid .glow-card:nth-child(1) { transition-delay: 0s; }
+.cards-grid .glow-card:nth-child(2) { transition-delay: 0.1s; }
+.cards-grid .glow-card:nth-child(3) { transition-delay: 0.2s; }
 
-.t-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-}
-
-.t-red   { background: #ff5f57; }
-.t-yel   { background: #ffbd2e; }
-.t-grn   { background: #28c840; }
-
-.t-line  { color: var(--muted); }
-.t-cyan  { color: var(--cyan); }
-.t-green { color: #00d68f; }
-.t-dim   { color: var(--muted2); }
-
-/* scrollbar */
-::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-track { background: var(--bg); }
-::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+/* WHATSAPP SVG */
+.wa-icon { width: 18px; height: 18px; flex-shrink: 0; }
 </style>
 </head>
 <body>
 
 <!-- NAV -->
 <nav>
-  <a href="#" class="nav-logo">
-    <!-- NEXUS SVG LOGO -->
-    <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="16" cy="16" r="3" fill="#00F0FF"/>
-      <circle cx="6"  cy="6"  r="2" fill="#00F0FF" opacity="0.7"/>
-      <circle cx="26" cy="6"  r="2" fill="#00F0FF" opacity="0.7"/>
-      <circle cx="6"  cy="26" r="2" fill="#00F0FF" opacity="0.7"/>
-      <circle cx="26" cy="26" r="2" fill="#00F0FF" opacity="0.7"/>
-      <circle cx="16" cy="4"  r="1.5" fill="#00F0FF" opacity="0.5"/>
-      <circle cx="16" cy="28" r="1.5" fill="#00F0FF" opacity="0.5"/>
-      <circle cx="4"  cy="16" r="1.5" fill="#00F0FF" opacity="0.5"/>
-      <circle cx="28" cy="16" r="1.5" fill="#00F0FF" opacity="0.5"/>
-      <line x1="16" y1="16" x2="6"  y2="6"  stroke="#00F0FF" stroke-width="0.8" opacity="0.4"/>
-      <line x1="16" y1="16" x2="26" y2="6"  stroke="#00F0FF" stroke-width="0.8" opacity="0.4"/>
-      <line x1="16" y1="16" x2="6"  y2="26" stroke="#00F0FF" stroke-width="0.8" opacity="0.4"/>
-      <line x1="16" y1="16" x2="26" y2="26" stroke="#00F0FF" stroke-width="0.8" opacity="0.4"/>
-      <line x1="16" y1="16" x2="16" y2="4"  stroke="#00F0FF" stroke-width="0.8" opacity="0.3"/>
-      <line x1="16" y1="16" x2="16" y2="28" stroke="#00F0FF" stroke-width="0.8" opacity="0.3"/>
-      <line x1="16" y1="16" x2="4"  y2="16" stroke="#00F0FF" stroke-width="0.8" opacity="0.3"/>
-      <line x1="16" y1="16" x2="28" y2="16" stroke="#00F0FF" stroke-width="0.8" opacity="0.3"/>
-      <circle cx="16" cy="16" r="7" stroke="#00F0FF" stroke-width="0.6" opacity="0.15"/>
-      <circle cx="16" cy="16" r="12" stroke="#00F0FF" stroke-width="0.4" opacity="0.08"/>
-    </svg>
-    <span class="nav-wordmark">NEXUS<span>AI</span></span>
+  <a href="#" class="logo">
+    <div class="logo-mark">
+      <svg viewBox="0 0 36 36" fill="none">
+        <circle cx="18" cy="18" r="3" fill="#C9973A"/>
+        <circle cx="5"  cy="5"  r="2.2" fill="#C9973A" opacity=".5"/>
+        <circle cx="31" cy="5"  r="2.2" fill="#C9973A" opacity=".5"/>
+        <circle cx="5"  cy="31" r="2.2" fill="#C9973A" opacity=".5"/>
+        <circle cx="31" cy="31" r="2.2" fill="#C9973A" opacity=".5"/>
+        <circle cx="18" cy="4"  r="1.5" fill="#C9973A" opacity=".3"/>
+        <circle cx="18" cy="32" r="1.5" fill="#C9973A" opacity=".3"/>
+        <circle cx="4"  cy="18" r="1.5" fill="#C9973A" opacity=".3"/>
+        <circle cx="32" cy="18" r="1.5" fill="#C9973A" opacity=".3"/>
+        <line x1="18" y1="18" x2="5"  y2="5"  stroke="#C9973A" stroke-width="0.8" opacity=".45"/>
+        <line x1="18" y1="18" x2="31" y2="5"  stroke="#C9973A" stroke-width="0.8" opacity=".45"/>
+        <line x1="18" y1="18" x2="5"  y2="31" stroke="#C9973A" stroke-width="0.8" opacity=".45"/>
+        <line x1="18" y1="18" x2="31" y2="31" stroke="#C9973A" stroke-width="0.8" opacity=".45"/>
+        <line x1="18" y1="18" x2="18" y2="4"  stroke="#C9973A" stroke-width="0.7" opacity=".25"/>
+        <line x1="18" y1="18" x2="18" y2="32" stroke="#C9973A" stroke-width="0.7" opacity=".25"/>
+        <line x1="18" y1="18" x2="4"  y2="18" stroke="#C9973A" stroke-width="0.7" opacity=".25"/>
+        <line x1="18" y1="18" x2="32" y2="18" stroke="#C9973A" stroke-width="0.7" opacity=".25"/>
+        <circle cx="18" cy="18" r="9" stroke="#C9973A" stroke-width="0.5" opacity=".15"/>
+        <circle cx="18" cy="18" r="14" stroke="#C9973A" stroke-width="0.3" opacity=".07"/>
+      </svg>
+    </div>
+    <div class="logo-text">
+      <div class="logo-name">Nexus<span>AI</span></div>
+      <div class="logo-sub">by AE Intelligence</div>
+    </div>
   </a>
-  <a href="https://wa.me/2349034161187?text=I%20want%20to%20deploy%20Nexus%20AI%20to%20my%20business" class="nav-cta" target="_blank">DEPLOY NOW</a>
+  <div class="nav-right">
+    <a href="#how-it-works" class="nav-link">How It Works</a>
+    <a href="#dealer" class="nav-link">For Dealers</a>
+    <a href="https://wa.me/2349034161187?text=I%20want%20to%20deploy%20Nexus%20AI%20to%20my%20business" class="nav-btn" target="_blank">
+      <svg class="wa-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a9.9 9.9 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.557 4.118 1.529 5.847L0 24l6.335-1.51C8.05 23.45 9.981 24 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.885 0-3.638-.513-5.145-1.402l-.369-.217-3.763.897.938-3.671-.24-.38A9.954 9.954 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+      Deploy Now
+    </a>
+  </div>
 </nav>
 
 <!-- HERO -->
 <section class="hero">
+  <div class="hero-orb"></div>
   <div class="hero-inner">
-    <div class="hero-badge">
-      <div class="badge-dot"></div>
-      AI Sales Infrastructure — Active 24/7
+
+    <div class="hero-kicker reveal">
+      <div class="kicker-line"></div>
+      <span class="kicker-text">AI Sales Infrastructure</span>
+      <div class="kicker-dot"></div>
     </div>
-    <h1 class="hero-h1">
-      The AI Sales Operator<br>
-      That <span class="cyan">Never Sleeps.</span>
+
+    <h1 class="hero-h1 reveal reveal-delay-1">
+      <span class="heavy">The AI Sales Operator</span><br>
+      That <span class="italic">Never Sleeps.</span>
     </h1>
-    <p class="hero-sub">
-      Stop losing high-intent leads to slow response times. Nexus AI qualifies, scores, and routes serious buyers — automatically, around the clock.
+
+    <div class="hero-divider reveal reveal-delay-2">
+      <div class="h-div-line"></div>
+      <div class="h-div-dia"></div>
+    </div>
+
+    <p class="hero-sub reveal reveal-delay-2">
+      Stop losing <strong>high-intent leads</strong> to slow response times.
+      Nexus AI qualifies, scores, and routes serious buyers to your team —
+      automatically, around the clock.
     </p>
-    <div class="hero-cta-group">
-      <a href="https://wa.me/2349034161187?text=I%20want%20to%20deploy%20Nexus%20AI%20to%20my%20business" class="btn-glow" target="_blank">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.557 4.118 1.529 5.847L0 24l6.335-1.51C8.05 23.45 9.981 24 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.885 0-3.638-.513-5.145-1.402l-.369-.217-3.763.897.938-3.671-.24-.38C2.537 15.556 2 13.84 2 12 2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+
+    <div class="hero-actions reveal reveal-delay-3">
+      <a href="https://wa.me/2349034161187?text=I%20want%20to%20deploy%20Nexus%20AI%20to%20my%20business" class="btn-hero" target="_blank">
+        <svg class="wa-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a9.9 9.9 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.557 4.118 1.529 5.847L0 24l6.335-1.51C8.05 23.45 9.981 24 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.885 0-3.638-.513-5.145-1.402l-.369-.217-3.763.897.938-3.671-.24-.38A9.954 9.954 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
         Deploy Nexus to My Business
       </a>
-      <a href="#how-it-works" class="btn-ghost">See how it works ↓</a>
+      <a href="#how-it-works" class="btn-see">See how it works →</a>
     </div>
-    <div class="hero-stats">
-      <div class="hero-stat">
-        <span class="hero-stat-val">0.5s</span>
-        <div class="hero-stat-label">Response Time</div>
+
+    <div class="hero-metrics reveal">
+      <div class="metric">
+        <span class="m-val">0.5s</span>
+        <div class="m-lbl">Response Time</div>
       </div>
-      <div class="hero-stat">
-        <span class="hero-stat-val">100%</span>
-        <div class="hero-stat-label">Lead Capture Rate</div>
+      <div class="metric">
+        <span class="m-val">100%</span>
+        <div class="m-lbl">Lead Capture</div>
       </div>
-      <div class="hero-stat">
-        <span class="hero-stat-val">24/7</span>
-        <div class="hero-stat-label">Availability</div>
+      <div class="metric">
+        <span class="m-val">24/7</span>
+        <div class="m-lbl">Availability</div>
       </div>
     </div>
+
   </div>
 </section>
 
-<div class="glow-divider"></div>
+<div class="g-rule"></div>
 
 <!-- FEATURES -->
-<section class="section-pad">
-  <div class="container">
-    <div class="fade-up">
-      <span class="section-tag">// Core Capabilities</span>
-      <h2 class="section-h2">Everything your sales team<br>can't do at 2am.</h2>
-      <p class="section-body">Nexus AI handles the entire top-of-funnel conversation — qualifying leads, logging data, and alerting your team only when a buyer is ready to close.</p>
+<section class="section section-alt">
+  <div class="wrap">
+    <div class="reveal">
+      <div class="sec-tag"><div class="tag-line"></div><span class="tag-text">Core Capabilities</span></div>
+      <h2 class="sec-h2">Everything your sales team<br>can't do <span class="italic">at 2am.</span></h2>
+      <div class="sec-rule"></div>
+      <p class="sec-body">Nexus handles the entire top-of-funnel — qualifying leads, logging data, and alerting your team only when a buyer is verified and ready to close.</p>
     </div>
-    <div class="features-grid">
-      <div class="feature-card fade-up">
-        <div class="feature-icon">🎯</div>
-        <div class="feature-title">Intelligent Lead Qualification</div>
-        <div class="feature-desc">Automatically filters window shoppers from serious buyers using multi-stage conversational logic. No human required until the lead is verified and scored.</div>
+    <div class="cards-grid">
+      <div class="glow-card reveal">
+        <div class="card-num">01 — Qualification</div>
+        <span class="card-icon">🎯</span>
+        <div class="card-title">Intelligent Lead Qualification</div>
+        <div class="card-body">Automatically filters window shoppers from serious buyers using multi-stage conversational logic. No human required until the lead is verified, named, and scored out of 100.</div>
       </div>
-      <div class="feature-card fade-up">
-        <div class="feature-icon">📊</div>
-        <div class="feature-title">CRM & Sheets Integration</div>
-        <div class="feature-desc">Every lead is instantly logged, scored 0–100, and synced to your Google Sheet in real time. Your team wakes up to a ranked pipeline — not a pile of unread messages.</div>
+      <div class="glow-card reveal">
+        <div class="card-num">02 — Data</div>
+        <span class="card-icon">📊</span>
+        <div class="card-title">CRM & Sheets Integration</div>
+        <div class="card-body">Every lead is instantly logged, scored, and synced to your Google Sheet in real time. Your team wakes up to a ranked pipeline — not a pile of unread WhatsApp messages.</div>
       </div>
-      <div class="feature-card fade-up">
-        <div class="feature-icon">⚡</div>
-        <div class="feature-title">24/7 Multimodal Engagement</div>
-        <div class="feature-desc">Handles text, voice notes, and image data — like trade-in photos or invoice documents — without fatigue. Every message gets a precise, on-brand response.</div>
+      <div class="glow-card reveal">
+        <div class="card-num">03 — Engagement</div>
+        <span class="card-icon">⚡</span>
+        <div class="card-title">24/7 Multimodal Engagement</div>
+        <div class="card-body">Handles text, voice notes, and image data — like car trade-in photos or invoices — without fatigue. Every message gets a precise, on-brand response at any hour of the night.</div>
       </div>
     </div>
   </div>
 </section>
 
-<div class="glow-divider"></div>
+<div class="g-rule"></div>
 
 <!-- HOW IT WORKS -->
-<section class="funnel-section section-pad" id="how-it-works">
-  <div class="container">
-    <div class="fade-up">
-      <span class="section-tag">// The 7-Stage Sales Engine</span>
-      <h2 class="section-h2">From first message<br>to closed deal.</h2>
-      <p class="section-body">Every conversation follows a precision-engineered funnel designed to extract qualified data and advance serious buyers — automatically.</p>
-    </div>
-    <div class="funnel-steps">
-      <div class="funnel-step fade-up">
-        <div class="step-num">01</div>
-        <div class="step-content">
-          <div class="step-title">Awareness</div>
-          <div class="step-desc">Nexus introduces your brand and captures the lead's full name. First impression handled.</div>
-        </div>
-      </div>
-      <div class="funnel-step fade-up">
-        <div class="step-num">02</div>
-        <div class="step-content">
-          <div class="step-title">Intent</div>
-          <div class="step-desc">The lead states their goal. Nexus validates it's a real business objective — not noise.</div>
-        </div>
-      </div>
-      <div class="funnel-step fade-up">
-        <div class="step-num">03</div>
-        <div class="step-content">
-          <div class="step-title">Budget</div>
-          <div class="step-desc">Budget is extracted and validated. Nexus won't advance without a real number — no tyre-kickers.</div>
-        </div>
-      </div>
-      <div class="funnel-step fade-up">
-        <div class="step-num">04</div>
-        <div class="step-content">
-          <div class="step-title">Qualification</div>
-          <div class="step-desc">Timeline and urgency captured. Lead profile is now complete with Name, Goal, and Budget verified.</div>
-        </div>
-      </div>
-      <div class="funnel-step fade-up">
-        <div class="step-num">05</div>
-        <div class="step-content">
-          <div class="step-title">Negotiation</div>
-          <div class="step-desc">Automated price defence engine. Handles objections, applies one strategic discount if needed, blocks further reduction.</div>
-        </div>
-      </div>
-      <div class="funnel-step fade-up">
-        <div class="step-num">06</div>
-        <div class="step-content">
-          <div class="step-title">Handover</div>
-          <div class="step-desc">Your sales manager gets a WhatsApp alert with the full lead brief — name, intent, budget, score. They close. Nexus already did the work.</div>
-        </div>
-      </div>
-      <div class="funnel-step fade-up">
-        <div class="step-num">07</div>
-        <div class="step-content">
-          <div class="step-title">Audit</div>
-          <div class="step-desc">Completed conversations are archived and logged. Full accountability trail in your Google Sheet.</div>
-        </div>
-      </div>
+<section class="section" id="how-it-works">
+  <div class="wrap">
+    <div class="reveal">
+      <div class="sec-tag"><div class="tag-line"></div><span class="tag-text">The 7-Stage Engine</span></div>
+      <h2 class="sec-h2"><span class="bold">From first message</span><br><span class="italic">to closed deal.</span></h2>
+      <div class="sec-rule"></div>
+      <p class="sec-body">Every conversation follows a precision-engineered funnel that extracts qualified data and advances serious buyers — automatically, without human intervention.</p>
     </div>
 
-    <!-- TERMINAL MOCKUP -->
-    <div class="terminal fade-up">
-      <div class="terminal-bar">
-        <div class="t-dot t-red"></div>
-        <div class="t-dot t-yel"></div>
-        <div class="t-dot t-grn"></div>
+    <div class="funnel reveal">
+      <div class="f-row"><div class="f-num">01</div><div class="f-content"><div class="f-title">Awareness</div><div class="f-desc">Nexus introduces your brand professionally and captures the lead's full name. First impression handled flawlessly.</div></div></div>
+      <div class="f-row"><div class="f-num">02</div><div class="f-content"><div class="f-title">Intent</div><div class="f-desc">The lead states their goal. Nexus validates it's a real business objective — vague or confused answers are rejected and re-asked with precision.</div></div></div>
+      <div class="f-row"><div class="f-num">03</div><div class="f-content"><div class="f-title">Budget</div><div class="f-desc">Budget is extracted and validated. Nexus won't advance without a real number. No tyre-kickers pass this stage — ever.</div></div></div>
+      <div class="f-row"><div class="f-num">04</div><div class="f-content"><div class="f-title">Qualification</div><div class="f-desc">Timeline and urgency captured. Lead profile complete with Name, Goal, and Budget all verified before proceeding.</div></div></div>
+      <div class="f-row"><div class="f-num">05</div><div class="f-content"><div class="f-title">Negotiation</div><div class="f-desc">Automated price defence. Handles objections, applies one strategic discount if needed, blocks any further reduction at floor price.</div></div></div>
+      <div class="f-row"><div class="f-num">06</div><div class="f-content"><div class="f-title">Handover</div><div class="f-desc">Your manager gets a WhatsApp alert with the full lead brief — name, intent, budget, and score. They close. Nexus already did the work.</div></div></div>
+      <div class="f-row"><div class="f-num">07</div><div class="f-content"><div class="f-title">Audit</div><div class="f-desc">Completed conversations archived and logged. Full accountability trail in your Google Sheet — forever.</div></div></div>
+    </div>
+
+    <div class="terminal reveal">
+      <div class="t-bar">
+        <div class="td td-r"></div><div class="td td-y"></div><div class="td td-g"></div>
+        <span class="t-title">NEXUS AI — HANDOVER ALERT — STAGE 6</span>
       </div>
-      <div class="t-line">// NEXUS AI — HANDOVER ALERT</div>
-      <br>
-      <div class="t-cyan">Lead     : Chukwuemeka Obi</div>
-      <div class="t-line">Intent   : Toyota Land Cruiser 2024</div>
-      <div class="t-line">Budget   : NGN 45,000,000</div>
-      <div class="t-green">Score    : 87/100 — 🔥 HOT</div>
-      <div class="t-line">Timeline : Before end of month</div>
-      <br>
-      <div class="t-dim">// Lead verified. Ready for close. ▌</div>
+      <div class="t-body">
+        <div class="tc">// Lead verified. Hot. Ready for close.</div>
+        <br>
+        <div><span class="tk">Name       </span><span class="tv">  Chukwuemeka Obi</span></div>
+        <div><span class="tk">Phone      </span><span class="tv">  +234 803 XXX XXXX</span></div>
+        <div><span class="tk">Intent     </span><span class="tv">  Toyota Land Cruiser 2024</span></div>
+        <div><span class="tk">Budget     </span><span class="tv">  NGN 45,000,000</span></div>
+        <div><span class="tk">Timeline   </span><span class="tv">  Before end of month</span></div>
+        <div><span class="tgo">Score      </span><span class="tg">  87 / 100  —  🔥 HOT</span></div>
+        <br>
+        <div class="tc">// WhatsApp alert sent to manager. Awaiting close. ▌</div>
+      </div>
     </div>
   </div>
 </section>
 
-<div class="glow-divider"></div>
+<div class="g-rule"></div>
 
 <!-- SMART VALIDATION -->
-<section class="section-pad">
-  <div class="container">
-    <div class="fade-up">
-      <span class="section-tag">// Precision Routing</span>
-      <h2 class="section-h2">Smart Validation.<br>Zero garbage data.</h2>
+<section class="section section-alt">
+  <div class="wrap">
+    <div class="reveal">
+      <div class="sec-tag"><div class="tag-line"></div><span class="tag-text">Precision Routing</span></div>
+      <h2 class="sec-h2"><span class="bold">Smart Validation.</span><br><span class="italic">Zero garbage data.</span></h2>
+      <div class="sec-rule"></div>
     </div>
-    <div class="validation-card fade-up">
-      <div class="validation-pill">PROBLEM</div>
-      <div class="validation-title">Basic bots accept any answer.<br>Nexus does not.</div>
-      <div class="validation-body">
-        Unlike generic chatbots, Nexus understands intent. It refuses to advance a lead until it verifies real, usable data — Budget, Business Goal, and Contact Information. Your CRM stays clean. Your team only sees qualified buyers.
+    <div class="val-wrap reveal">
+      <div class="val-head">
+        <span class="val-tag">The Problem With Basic Bots</span>
+        <div class="val-title">Generic chatbots accept any answer.<br>Nexus does not.</div>
       </div>
-      <div class="validation-checks">
-        <div class="check-row">
-          <div class="check-icon">✓</div>
-          Rejects vague answers and re-asks with precision
-        </div>
-        <div class="check-row">
-          <div class="check-icon">✓</div>
-          Validates budget contains actual numbers or currency
-        </div>
-        <div class="check-row">
-          <div class="check-icon">✓</div>
-          Detects confusion signals and explains the value proposition
-        </div>
-        <div class="check-row">
-          <div class="check-icon">✓</div>
-          Scores every lead 0–100 before handover
-        </div>
-        <div class="check-row">
-          <div class="check-icon">✓</div>
-          Only re-engages leads scoring above threshold — no wasted messages
+      <div class="val-body-wrap">
+        <p class="val-text">Unlike basic bots, Nexus understands intent. It refuses to advance a lead until it verifies real, usable data — Budget, Business Goal, and Contact Information. Your CRM stays clean. Your team only sees qualified buyers worth their time and energy.</p>
+        <div class="checks">
+          <div class="chk"><div class="chk-icon"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div>Rejects vague answers and re-asks with precision</div>
+          <div class="chk"><div class="chk-icon"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div>Validates budget contains actual numbers or currency</div>
+          <div class="chk"><div class="chk-icon"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div>Detects confusion and re-explains your value proposition</div>
+          <div class="chk"><div class="chk-icon"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div>Scores every lead 0–100 before alerting your team</div>
+          <div class="chk"><div class="chk-icon"><svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg></div>Only re-engages leads above score threshold — zero wasted messages</div>
         </div>
       </div>
     </div>
   </div>
 </section>
 
-<div class="glow-divider"></div>
+<div class="g-rule"></div>
 
-<!-- DEALER SECTION -->
-<section class="section-pad" style="background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
-  <div class="container">
-    <div class="fade-up">
-      <span class="section-tag">// Built for Automotive</span>
-      <h2 class="section-h2">Designed for<br>Car Dealerships.</h2>
-      <p class="section-body">Nexus was engineered with Nigerian luxury automotive in mind. Every feature maps to a real dealership workflow.</p>
+<!-- DEALER -->
+<section class="section" id="dealer">
+  <div class="wrap">
+    <div class="reveal">
+      <div class="sec-tag"><div class="tag-line"></div><span class="tag-text">Built for Automotive</span></div>
+      <h2 class="sec-h2">Designed for<br><span class="italic">Car Dealerships.</span></h2>
+      <div class="sec-rule"></div>
+      <p class="sec-body">Nexus was engineered with Nigerian luxury automotive in mind. Every feature maps directly to a real dealership workflow your team already uses.</p>
     </div>
     <div class="dealer-grid">
-      <div class="dealer-card fade-up">
-        <div class="dealer-icon">🚗</div>
+      <div class="d-card reveal">
+        <div class="d-icon-wrap">🚗</div>
         <div>
-          <div class="dealer-title">Inventory Inquiries</div>
-          <div class="dealer-desc">Nexus checks your live inventory sheet and responds with pricing instantly — no salesperson needed for availability questions.</div>
+          <div class="d-title">Inventory Inquiries</div>
+          <div class="d-body">Checks your live inventory sheet and responds with accurate pricing instantly. No salesperson needed for availability questions at any hour of the day or night.</div>
         </div>
       </div>
-      <div class="dealer-card fade-up">
-        <div class="dealer-icon">📅</div>
+      <div class="d-card reveal">
+        <div class="d-icon-wrap">📅</div>
         <div>
-          <div class="dealer-title">Test Drive Booking</div>
-          <div class="dealer-desc">Qualifies interest level before booking. Only serious buyers get scheduled — protecting your team's time.</div>
+          <div class="d-title">Test Drive Booking</div>
+          <div class="d-body">Qualifies interest level before scheduling. Only serious, budget-verified buyers get booked — protecting your team's time and your showroom floor.</div>
         </div>
       </div>
-      <div class="dealer-card fade-up">
-        <div class="dealer-icon">📸</div>
+      <div class="d-card reveal">
+        <div class="d-icon-wrap">📸</div>
         <div>
-          <div class="dealer-title">Trade-In Valuations</div>
-          <div class="dealer-desc">Accepts photos of trade-in vehicles via WhatsApp, processes the image, and logs details to your Audit sheet for team review.</div>
+          <div class="d-title">Trade-In Valuations</div>
+          <div class="d-body">Accepts photos of trade-in vehicles directly via WhatsApp, processes the image data, and logs full details to your Audit sheet for team review.</div>
         </div>
       </div>
     </div>
   </div>
 </section>
 
-<div class="glow-divider"></div>
+<div class="g-rule"></div>
 
-<!-- PERFORMANCE STATS -->
-<section class="stats-strip">
-  <div class="container">
-    <div class="fade-up" style="text-align:center; margin-bottom: 40px;">
-      <span class="section-tag" style="display:block; text-align:center">// Performance Metrics</span>
-      <h2 class="section-h2" style="text-align:center">Numbers that matter<br>to your bottom line.</h2>
+<!-- STATS -->
+<section class="stats-sec">
+  <div class="wrap">
+    <div class="reveal" style="text-align:center">
+      <div class="sec-tag" style="justify-content:center"><div class="tag-line"></div><span class="tag-text">Performance</span></div>
+      <h2 class="sec-h2" style="text-align:center">Numbers that matter<br>to your <span class="italic">bottom line.</span></h2>
+      <div class="sec-rule" style="margin-left:auto;margin-right:auto"></div>
     </div>
-    <div class="stats-row fade-up">
-      <div class="stat-item">
-        <span class="stat-num">0.5s</span>
-        <div class="stat-lbl">Average Response Time</div>
-      </div>
-      <div class="stat-item">
-        <span class="stat-num">100%</span>
-        <div class="stat-lbl">Lead Capture Rate</div>
-      </div>
-      <div class="stat-item">
-        <span class="stat-num">24/7</span>
-        <div class="stat-lbl">Availability — Zero Downtime</div>
-      </div>
-      <div class="stat-item">
-        <span class="stat-num">7</span>
-        <div class="stat-lbl">Stage Qualification Engine</div>
-      </div>
+    <div class="stat-grid reveal">
+      <div class="s-item"><span class="s-big">0.5s</span><div class="s-sm">Average Response Time</div></div>
+      <div class="s-item"><span class="s-big">100%</span><div class="s-sm">Lead Capture Rate</div></div>
+      <div class="s-item"><span class="s-big">24/7</span><div class="s-sm">Zero Downtime Availability</div></div>
+      <div class="s-item"><span class="s-big">7</span><div class="s-sm">Stage Qualification Engine</div></div>
     </div>
   </div>
 </section>
 
-<div class="glow-divider"></div>
+<div class="g-rule"></div>
 
 <!-- CTA -->
-<section class="cta-section">
-  <div class="container">
-    <div class="fade-up">
-      <span class="section-tag" style="display:block; text-align:center">// Ready to Deploy</span>
-      <h2 class="cta-h2">Your competitors are still<br>replying <span>manually.</span></h2>
-      <p class="cta-sub">Every minute without Nexus is a lead that went cold.<br>Deploy in 48 hours. No technical knowledge required.</p>
+<section class="cta-sec">
+  <div class="cta-orb"></div>
+  <div class="wrap">
+    <div class="reveal">
+      <h2 class="cta-h">Your competitors are<br>still replying <span class="italic bold">manually.</span></h2>
+      <div class="cta-rule"></div>
+      <p class="cta-sub">Every minute without Nexus is a lead that went cold. Deploy in 48 hours. No technical knowledge required on your end.</p>
       <a href="https://wa.me/2349034161187?text=I%20want%20to%20deploy%20Nexus%20AI%20to%20my%20business" class="cta-btn" target="_blank">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.557 4.118 1.529 5.847L0 24l6.335-1.51C8.05 23.45 9.981 24 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.885 0-3.638-.513-5.145-1.402l-.369-.217-3.763.897.938-3.671-.24-.38C2.537 15.556 2 13.84 2 12 2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
+        <svg class="wa-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a9.9 9.9 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.557 4.118 1.529 5.847L0 24l6.335-1.51C8.05 23.45 9.981 24 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.885 0-3.638-.513-5.145-1.402l-.369-.217-3.763.897.938-3.671-.24-.38A9.954 9.954 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
         Deploy Nexus to My Business
       </a>
-      <div class="cta-note">// RESPOND VIA WHATSAPP — WE REPLY WITHIN 2 HOURS</div>
+      <div class="cta-note">WhatsApp · Reply within 2 hours · No tech knowledge needed</div>
     </div>
   </div>
 </section>
 
 <!-- FOOTER -->
 <footer>
-  <div class="footer-logo">AE INTELLIGENCE — NEXUS AI v2.0</div>
-  <div class="footer-copy">Built by AE Intelligence · Nigeria · Turning Complexity into Capital</div>
+  <div class="f-logo">Nexus<span>AI</span></div>
+  <div class="f-tag">by AE Intelligence</div>
+  <div class="f-copy">Built in Nigeria · Turning Complexity into Capital</div>
 </footer>
 
 <script>
-  // Scroll animations
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(e => {
-      if (e.isIntersecting) {
-        e.target.classList.add('visible');
-        observer.unobserve(e.target);
-      }
-    });
-  }, { threshold: 0.1 });
+// Scroll reveal
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('visible');
+      io.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.08 });
 
-  document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+// Make hero visible immediately
+document.querySelectorAll('.hero .reveal').forEach((el, i) => {
+  setTimeout(() => el.classList.add('visible'), i * 120);
+});
 </script>
 </body>
 </html>
