@@ -16,7 +16,7 @@ import datetime
 import threading
 import requests
 from typing import Optional, Dict, List
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
 
 # -- Optional imports with graceful degradation --------------------------------
 try:
@@ -1037,72 +1037,80 @@ def background_scheduler():
 # ------------------------------------------------------------------------------
 @app.route("/webhook/<business_id>", methods=["GET"])
 def webhook_verify(business_id):
-    configs = load_all_configs()
-    if business_id not in configs:
+    if business_id not in load_all_configs():
         return jsonify({"error": "Unknown business"}), 404
-
-    mode      = request.args.get("hub.mode")
-    token     = request.args.get("hub.verify_token")
-    challenge = request.args.get("hub.challenge")
-    expected  = configs[business_id].get("verify_token", "")
-
-    if mode == "subscribe" and token == expected:
-        return challenge, 200
-    return jsonify({"error": "Forbidden"}), 403
+    return jsonify({"status": "ok", "business": business_id}), 200
 
 
 @app.route("/webhook/<business_id>", methods=["POST"])
 def webhook_receive(business_id):
     if business_id not in load_all_configs():
-        return jsonify({"error": "Unknown business"}), 404
+        return Response(
+            '<?xml version="1.0" encoding="UTF-8"?><Response></Response>',
+            status=404,
+            mimetype="text/xml"
+        )
 
-    data = request.get_json(silent=True)
-    if not data:
-        return jsonify({"error": "Invalid payload"}), 400
+    def twiml(message):
+        safe = (
+            message
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace('"', "&quot;")
+        )
+        xml = (
+            '<?xml version="1.0" encoding="UTF-8"?>'
+            '<Response><Message>{}</Message></Response>'
+        ).format(safe)
+        return Response(xml, status=200, mimetype="text/xml")
 
     try:
-        entry    = data["entry"][0]
-        changes  = entry["changes"][0]
-        value    = changes["value"]
-        message  = value["messages"][0]
-        phone    = message["from"]
-        msg_type = message.get("type", "text")
+        phone     = request.form.get("From", "").strip()
+        msg_type  = request.form.get("MessageType", "text").strip()
+        body      = request.form.get("Body", "").strip()
+        media_url = request.form.get("MediaUrl0", "").strip()
+        num_media = int(request.form.get("NumMedia", "0") or "0")
 
-        if msg_type == "text":
-            text = message.get("text", {}).get("body", "").strip()
+        if phone.startswith("whatsapp:"):
+            phone = phone[len("whatsapp:"):]
 
-        elif msg_type == "audio":
-            media_id  = message["audio"]["id"]
-            media_url = "https://graph.facebook.com/v19.0/{}".format(media_id)
-            text      = transcribe_audio(media_url, business_id)
-            log_to_audit(phone, business_id, "AUDIO_MESSAGE", media_url)
+        if not phone:
+            return twiml("Could not identify your number. Please try again.")
 
-        elif msg_type == "image":
-            media_id  = message["image"]["id"]
-            media_url = "https://graph.facebook.com/v19.0/{}".format(media_id)
-            text      = media_url
-
+        if num_media > 0 and media_url:
+            media_type = request.form.get("MediaContentType0", "")
+            if "audio" in media_type:
+                text = transcribe_audio(media_url, business_id)
+                log_to_audit(phone, business_id, "AUDIO_MESSAGE", media_url)
+            elif "image" in media_type or "pdf" in media_type:
+                text = media_url
+                log_to_audit(phone, business_id, "IMAGE_RECEIVED", media_url)
+            else:
+                return twiml(
+                    "I received your file but cannot process that type yet. "
+                    "Please send text, an image, or a voice note."
+                )
         else:
-            return jsonify({"status": "ignored", "reason": "unsupported type: {}".format(msg_type)}), 200
+            text = body
 
         if not text:
-            return jsonify({"status": "ignored", "reason": "empty message"}), 200
+            return twiml("I did not catch that. Could you send that again?")
 
         reply = route_message(phone, text, business_id)
 
-        print("\n\033[90m  [{}][{}] IN : {}\033[0m".format(business_id, phone, text[:80]))
-        print("\033[36m  [{}][{}] OUT: {}\033[0m\n".format(business_id, phone, reply[:80]))
+        print("\n\033[90m  [{}][{}] IN : {}\033[0m".format(
+            business_id, phone, text[:80]))
+        print("\033[36m  [{}][{}] OUT: {}\033[0m\n".format(
+            business_id, phone, reply[:80]))
 
-        send_whatsapp(phone, reply, business_id)
-        return jsonify({"status": "processed"}), 200
+        return twiml(reply)
 
-    except (KeyError, IndexError) as e:
-        print("\033[31m  [WEBHOOK:{}] Parse error: {}\033[0m".format(business_id, e))
-        return jsonify({"status": "ignored", "reason": "malformed payload"}), 200
+    except Exception as e:
+        print("\033[31m  [WEBHOOK:{}] Error: {}\033[0m".format(business_id, e))
+        return twiml("Something went wrong on our end. Please try again.")
 
-# ------------------------------------------------------------------------------
-#  FLASK - BUSINESS MANAGEMENT
-# ------------------------------------------------------------------------------
+
 @app.route("/business/register", methods=["POST"])
 def api_register_business():
     data = request.get_json(silent=True)
