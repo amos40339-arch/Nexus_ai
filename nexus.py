@@ -720,18 +720,75 @@ def trigger_handover(phone, business_id):
 
     return {"summary": customer, "whatsapp_message": whatsapp_message}
 
-# ------------------------------------------------------------------------------
-#  INVENTORY KEYWORD EXTRACTOR
-# ------------------------------------------------------------------------------
-def extract_inventory_keyword(message):
-    msg_lower = message.lower()
-    for kw in INVENTORY_KEYWORDS:
-        if kw in msg_lower:
-            return kw
-    return None
 
 # ------------------------------------------------------------------------------
-#  FUNNEL ROUTER
+#  INPUT VALIDATORS
+# ------------------------------------------------------------------------------
+
+CONFUSION_SIGNALS = [
+    "i don't understand", "i dont understand", "what is this",
+    "what do you mean", "who are you", "what", "huh", "?",
+    "i'm confused", "im confused", "what's going on", "whats going on",
+    "i don't know", "i dont know", "not sure", "no idea",
+    "what are you", "explain", "what is ae", "what is nexus"
+]
+
+GARBAGE_SIGNALS = [
+    "ok", "okay", "lol", "haha", "hmm", "test", "hi", "hello",
+    "hey", "yo", "sup", "k", "yes", "no", "maybe", "fine", "sure",
+    "good", "great", "nice", "cool", "wow", "oh"
+]
+
+def is_confused(msg):
+    """Returns True if the message signals confusion."""
+    ml = msg.lower().strip()
+    return any(signal in ml for signal in CONFUSION_SIGNALS)
+
+def is_garbage(msg):
+    """Returns True if the message is too vague to extract intent from."""
+    ml = msg.lower().strip()
+    if ml in GARBAGE_SIGNALS:
+        return True
+    if len(ml) < 5:
+        return True
+    return False
+
+def has_name(msg):
+    """
+    A name is valid if it contains at least two words (first + last or first + business).
+    Single words like 'John' are accepted too but must be > 2 chars.
+    """
+    words = msg.strip().split()
+    if len(words) >= 2:
+        return True
+    if len(words) == 1 and len(words[0]) > 2:
+        return True
+    return False
+
+def has_budget(msg):
+    """
+    Returns True if the message contains any numeric or currency indicator.
+    Accepts: digits, NGN, naira, N, #, $, k, million, m
+    """
+    ml = msg.lower()
+    if re.search(r"\d", ml):
+        return True
+    currency_words = ["ngn", "naira", "dollar", "usd", "million", "thousand", "k", "m"]
+    if any(w in ml for w in currency_words):
+        return True
+    if any(sym in msg for sym in ["#", "$", "N", "₦"]):
+        return True
+    return False
+
+def has_business_goal(msg):
+    """
+    Returns True if the message is specific enough to be a business goal.
+    Must be > 10 chars and not pure garbage.
+    """
+    return len(msg.strip()) > 10 and not is_garbage(msg)
+
+# ------------------------------------------------------------------------------
+#  FUNNEL ROUTER - Ruthless data quality edition
 # ------------------------------------------------------------------------------
 def route_message(phone, message, business_id):
     # Customer is active - reset re-engagement flag
@@ -744,18 +801,6 @@ def route_message(phone, message, business_id):
     stage    = customer["stage"]
     msg      = message.strip()
 
-    # Global: inventory hook
-    inv_keyword = extract_inventory_keyword(msg)
-    if inv_keyword and stage in ("INTENT", "BUDGET", "QUALIFICATION", "NEGOTIATION"):
-        item = lookup_inventory(inv_keyword, business_id)
-        if item:
-            update_customer(phone, {
-                "quoted_price":     item["price"],
-                "active_inventory": item["item"]
-            }, business_id)
-            add_note(phone, "Inventory matched: {} @ NGN {:,.0f}".format(
-                item["item"], item["price"]), business_id)
-
     # Global: image/OCR hook
     if msg.startswith("http") and any(
         ext in msg.lower() for ext in [".jpg", ".jpeg", ".png", ".webp", ".pdf"]
@@ -763,66 +808,141 @@ def route_message(phone, message, business_id):
         process_invoice(phone, msg, business_id)
         log_to_audit(phone, business_id, "IMAGE_RECEIVED", msg)
         return (
-            "I've received and processed your document. "
+            "I\'ve received and processed your document. "
             "Our team will review the details and follow up shortly."
         )
 
-    # AWARENESS
+    # ── AWARENESS ─────────────────────────────────────────────────────────────
     if stage == "AWARENESS":
-        add_note(phone, "First contact: '{}'".format(msg), business_id)
+        add_note(phone, "First contact: \'{}\'".format(msg), business_id)
         advance_stage(phone, business_id)
         return (
-            "Welcome. You've reached a premium service. "
-            "To assist you properly - what specific outcome are you looking for today?"
+            "This is AE Intelligence — we build AI Automation systems and "
+            "premium digital infrastructure for luxury brands and high-ticket businesses.\n\n"
+            "Before we go further, what is your full name?"
         )
 
-    # INTENT
+    # ── NAME CAPTURE ──────────────────────────────────────────────────────────
     elif stage == "INTENT":
-        update_customer(phone, {"intent": msg}, business_id)
-        add_note(phone, "Intent captured: '{}'".format(msg), business_id)
-        advance_stage(phone, business_id)
-        item = lookup_inventory(msg, business_id) if inv_keyword else None
-        if item:
+        # First pass in INTENT = collecting name
+        if not customer.get("name"):
+            if is_confused(msg):
+                return (
+                    "We are AE Intelligence. We qualify businesses for AI Automation "
+                    "and premium web development partnerships.\n\n"
+                    "Let\'s start simple — what is your full name?"
+                )
+            if not has_name(msg):
+                return (
+                    "I need your actual name to proceed. "
+                    "What is your full name?"
+                )
+            # Valid name — save and ask for business goal
+            update_customer(phone, {"name": msg}, business_id)
+            add_note(phone, "Name captured: \'{}\'".format(msg), business_id)
             return (
-                "Understood - {}. We have that available. "
-                "Our pricing starts from NGN {:,.0f}. "
-                "What's your approximate budget?".format(item["item"], item["price"])
+                "Good to meet you, {}.\n\n"
+                "Now tell me — what specific business problem are you trying to solve? "
+                "Be specific. Vague answers delay the process.".format(msg.split()[0])
             )
-        return (
-            "Understood. '{}' - that's exactly what we specialize in. "
-            "What's your approximate budget range?".format(msg)
-        )
 
-    # BUDGET
+        # Second pass in INTENT = collecting business goal
+        else:
+            if is_confused(msg):
+                return (
+                    "Let me be direct — AE Intelligence works with businesses that "
+                    "have a clear problem to solve.\n\n"
+                    "What outcome do you want? Examples:\n"
+                    "- Automate my lead qualification\n"
+                    "- Build a premium website for my real estate brand\n"
+                    "- Set up AI chat for my dealership\n\n"
+                    "What is YOUR goal?"
+                )
+            if not has_business_goal(msg):
+                return (
+                    "That\'s not enough information to work with.\n\n"
+                    "Describe the specific outcome you are trying to achieve. "
+                    "What does success look like for your business?"
+                )
+            # Valid intent — save and advance
+            update_customer(phone, {"intent": msg}, business_id)
+            add_note(phone, "Intent captured: \'{}\'".format(msg), business_id)
+            advance_stage(phone, business_id)
+            return (
+                "Understood. That\'s a project we can work with.\n\n"
+                "To determine if this is feasible and worth both our time — "
+                "what is your allocated budget for this project? "
+                "(Be specific: amount in Naira or USD)"
+            )
+
+    # ── BUDGET ────────────────────────────────────────────────────────────────
     elif stage == "BUDGET":
-        update_customer(phone, {"budget": msg}, business_id)
-        add_note(phone, "Budget stated: '{}'".format(msg), business_id)
-        advance_stage(phone, business_id)
-        return (
-            "Good. Budget noted. "
-            "One last thing before I prepare your proposal - "
-            "how soon are you looking to move on this?"
-        )
-
-    # QUALIFICATION
-    elif stage == "QUALIFICATION":
-        add_note(phone, "Qualification response: '{}'".format(msg), business_id)
-        advance_stage(phone, business_id)
-        customer = get_customer(phone, business_id)
-        price    = customer.get("quoted_price")
-        item     = customer.get("active_inventory")
-        if price and item:
+        if is_confused(msg):
             return (
-                "Perfect. Based on everything you've shared, I have a tailored proposal. "
-                "{} - our offer for you is NGN {:,.0f}. "
-                "This includes full support and delivery. What are your thoughts?".format(item, price)
+                "I\'ll be direct — without a budget range, we cannot scope a project.\n\n"
+                "To respect both our time, what is your allocated investment "
+                "for this project? Give me a number or range."
             )
+        if not has_budget(msg):
+            return (
+                "To respect both our time, I need a baseline investment range "
+                "to determine if this project is feasible for the agency.\n\n"
+                "What is your allocated budget? "
+                "(e.g. \'500k\', \'2 million\', \'$3,000\')"
+            )
+        # Valid budget
+        update_customer(phone, {"budget": msg}, business_id)
+        add_note(phone, "Budget stated: \'{}\'".format(msg), business_id)
+        advance_stage(phone, business_id)
         return (
-            "Perfect. Based on everything you've shared, I have a tailored proposal ready. "
-            "I'll send the details now - review and let me know your thoughts."
+            "Noted.\n\n"
+            "Last question before I prepare your assessment — "
+            "how soon are you looking to start? "
+            "And is there a deadline driving this project?"
         )
 
-    # NEGOTIATION
+    # ── QUALIFICATION ─────────────────────────────────────────────────────────
+    elif stage == "QUALIFICATION":
+        if is_garbage(msg) or len(msg.strip()) < 3:
+            return (
+                "I need a real answer here.\n\n"
+                "How soon are you looking to start, and is there a deadline?"
+            )
+
+        # Gate: verify we actually have name, intent, budget before advancing
+        customer = get_customer(phone, business_id)
+        missing  = []
+        if not customer.get("name"):
+            missing.append("your name")
+        if not customer.get("intent"):
+            missing.append("your business goal")
+        if not customer.get("budget"):
+            missing.append("your budget")
+
+        if missing:
+            return (
+                "Before I can proceed, I still need: {}.\n\n"
+                "Let\'s get that sorted first.".format(", ".join(missing))
+            )
+
+        add_note(phone, "Qualification response: \'{}\'".format(msg), business_id)
+        advance_stage(phone, business_id)
+
+        name   = customer.get("name", "").split()[0]
+        intent = customer.get("intent", "your project")
+        budget = customer.get("budget", "the stated budget")
+
+        return (
+            "Here is what I have on file, {}:\n\n"
+            "Goal   : {}\n"
+            "Budget : {}\n"
+            "Timeline: {}\n\n"
+            "Based on this, AE Intelligence can deliver. "
+            "I am preparing a tailored proposal now. "
+            "What are your thoughts on moving forward?".format(name, intent, budget, msg)
+        )
+
+    # ── NEGOTIATION ───────────────────────────────────────────────────────────
     elif stage == "NEGOTIATION":
         customer = get_customer(phone, business_id)
         quoted   = customer.get("quoted_price") or 0
@@ -835,16 +955,23 @@ def route_message(phone, message, business_id):
                 result["blocked"], result["new_price"]), business_id)
             return result["message"]
         else:
+            # Check confusion — don\'t advance if they\'re stalling
+            if is_confused(msg):
+                return (
+                    "The proposal is clear. If you have a specific concern, "
+                    "state it and we will address it directly."
+                )
             add_note(phone, "Customer accepted terms.", business_id)
             advance_stage(phone, business_id)
             handover = trigger_handover(phone, business_id)
             alert_manager(handover["whatsapp_message"], business_id)
             return (
-                "Excellent. Your file has been flagged as priority. "
-                "Our sales manager will reach out directly within the hour to finalize everything."
+                "Excellent. Your file has been flagged as priority.\n\n"
+                "Our strategist will reach out directly within the hour "
+                "to finalize the engagement. Expect a call."
             )
 
-    # HANDOVER
+    # ── HANDOVER ──────────────────────────────────────────────────────────────
     elif stage == "HANDOVER":
         if "urgent" in msg.lower():
             alert_manager(
@@ -852,24 +979,25 @@ def route_message(phone, message, business_id):
                 business_id
             )
             return (
-                "Understood. I've flagged your message as URGENT. "
+                "Understood. Flagged as URGENT. "
                 "Expect a response within minutes."
             )
         return (
-            "Your inquiry has been escalated to our sales team. "
-            "Please expect a call or message shortly. "
+            "Your file has been escalated to our strategy team. "
+            "You will be contacted shortly to finalize the engagement.\n\n"
             "Reply URGENT if you need immediate attention."
         )
 
-    # AUDIT
+    # ── AUDIT ─────────────────────────────────────────────────────────────────
     elif stage == "AUDIT":
         log_to_audit(phone, business_id, "POST_AUDIT_MESSAGE", msg)
         return (
-            "This conversation has been completed and archived. "
-            "For a new inquiry, please contact us through our main channel."
+            "This engagement has been completed and archived. "
+            "For a new project inquiry, contact us through our main channel."
         )
 
-    return "Message received. A team member will respond shortly."
+    return "Message received. Our team will respond shortly."
+
 
 # ------------------------------------------------------------------------------
 #  RE-ENGAGEMENT ENGINE - score-gated
