@@ -1429,6 +1429,12 @@ def api_get_score(business_id, phone):
 # ------------------------------------------------------------------------------
 #  FLASK - HEALTH
 # ------------------------------------------------------------------------------
+@app.route("/dashboard")
+def dashboard():
+    with open("dashboard.html", "r") as f:
+        return f.read(), 200, {"Content-Type": "text/html"}
+
+
 @app.route("/health", methods=["GET"])
 def health_check():
     configs = load_all_configs()
