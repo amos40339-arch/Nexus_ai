@@ -1435,6 +1435,12 @@ def dashboard():
         return f.read(), 200, {"Content-Type": "text/html"}
 
 
+@app.route("/")
+def landing():
+    with open("nexus-landing.html", "r") as f:
+        return f.read(), 200, {"Content-Type": "text/html"}
+
+
 @app.route("/health", methods=["GET"])
 def health_check():
     configs = load_all_configs()
