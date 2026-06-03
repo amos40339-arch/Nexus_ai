@@ -4,7 +4,7 @@ set_time_limit(120);
 require_once __DIR__ . '/config.php';
 $conn->set_charset('utf8mb4');
 
-// ── Fetch categories with account counts ──────────────────────
+// ── Fetch categories — exclude Growth Services ────────────────
 $catRes = $conn->query("
     SELECT
         sc.id, sc.name, sc.icon, sc.color,
@@ -13,6 +13,8 @@ $catRes = $conn->query("
         SUM(CASE WHEN sa.status = 'available' THEN 1 ELSE 0 END) AS total_available
     FROM social_categories sc
     LEFT JOIN social_accounts sa ON sa.category_id = sc.id
+    WHERE sc.name NOT LIKE '%Growth Services%'
+      AND sc.name NOT LIKE '%growth services%'
     GROUP BY sc.id
     HAVING total_stock > 0
     ORDER BY sc.name ASC
@@ -20,6 +22,41 @@ $catRes = $conn->query("
 $categories = [];
 while ($row = $catRes->fetch_assoc()) {
     $categories[] = $row;
+}
+
+// ── Inject virtual UK TikTok folder ──────────────────────────
+// Find the TikTok category ID to use for UK accounts query
+$tiktokCatId = null;
+foreach ($categories as $cat) {
+    if (stripos($cat['name'], 'tiktok') !== false && stripos($cat['name'], 'UK') === false) {
+        $tiktokCatId = $cat['id'];
+        break;
+    }
+}
+if ($tiktokCatId) {
+    $ukRes = $conn->prepare("
+        SELECT COUNT(*) AS total_available,
+               SUM(CASE WHEN status='sold' THEN 1 ELSE 0 END) AS total_sold
+        FROM social_accounts
+        WHERE category_id = ? AND (title LIKE '%UK%' OR title LIKE '%United Kingdom%' OR title LIKE '%uk %')
+    ");
+    $ukRes->bind_param('i', $tiktokCatId);
+    $ukRes->execute();
+    $ukRow = $ukRes->get_result()->fetch_assoc();
+    $ukRes->close();
+    if ($ukRow['total_available'] > 0) {
+        $categories[] = [
+            'id'              => 'uk_tiktok_' . $tiktokCatId,
+            'name'            => 'UK TikTok Accounts',
+            'icon'            => 'fab fa-tiktok',
+            'color'           => '#000000',
+            'total_stock'     => $ukRow['total_available'],
+            'total_sold'      => $ukRow['total_sold'],
+            'total_available' => $ukRow['total_available'],
+            '_virtual'        => true,
+            '_parent_id'      => $tiktokCatId,
+        ];
+    }
 }
 
 // ── Pin priority platforms to the top ────────────────────────
@@ -41,34 +78,52 @@ usort($categories, function($a, $b) use ($PINNED) {
 });
 
 // ── Fetch selected category accounts ─────────────────────────
-$selected_cat = isset($_GET['cat']) ? intval($_GET['cat']) : null;
+$raw_cat     = $_GET['cat'] ?? null;
+$is_uk_tiktok = ($raw_cat && strpos($raw_cat, 'uk_tiktok_') === 0);
+$selected_cat = $is_uk_tiktok ? intval(str_replace('uk_tiktok_', '', $raw_cat)) : ($raw_cat ? intval($raw_cat) : null);
+
 $accounts = [];
-$selected_cat_name = '';
+$selected_cat_name  = '';
 $selected_cat_color = '#6A00DF';
-$selected_cat_icon = 'fas fa-store';
+$selected_cat_icon  = 'fas fa-store';
 
 if ($selected_cat) {
-    $catInfo = $conn->prepare("SELECT name, color, icon FROM social_categories WHERE id = ?");
-    $catInfo->bind_param('i', $selected_cat);
-    $catInfo->execute();
-    $catRow = $catInfo->get_result()->fetch_assoc();
-    $catInfo->close();
-    if ($catRow) {
-        $selected_cat_name  = $catRow['name'];
-        $selected_cat_color = $catRow['color'] ?: '#6A00DF';
-        $selected_cat_icon  = $catRow['icon']  ?: 'fas fa-store';
+    if ($is_uk_tiktok) {
+        $selected_cat_name  = 'UK TikTok Accounts';
+        $selected_cat_color = '#000000';
+        $selected_cat_icon  = 'fab fa-tiktok';
+        $accRes = $conn->prepare("
+            SELECT id, title, description, price, status, tags, image, created_at
+            FROM social_accounts
+            WHERE category_id = ? AND status = 'available'
+              AND (title LIKE '%UK%' OR title LIKE '%United Kingdom%' OR title LIKE '%uk %')
+            ORDER BY created_at DESC
+        ");
+        $accRes->bind_param('i', $selected_cat);
+        $accRes->execute();
+        $result = $accRes->get_result();
+    } else {
+        $catInfo = $conn->prepare("SELECT name, color, icon FROM social_categories WHERE id = ?");
+        $catInfo->bind_param('i', $selected_cat);
+        $catInfo->execute();
+        $catRow = $catInfo->get_result()->fetch_assoc();
+        $catInfo->close();
+        if ($catRow) {
+            $selected_cat_name  = $catRow['name'];
+            $selected_cat_color = $catRow['color'] ?: '#6A00DF';
+            $selected_cat_icon  = $catRow['icon']  ?: 'fas fa-store';
+        }
+        $accRes = $conn->prepare("
+            SELECT id, title, description, price, status, tags, image, created_at
+            FROM social_accounts
+            WHERE category_id = ? AND status = 'available'
+            ORDER BY created_at DESC
+        ");
+        $accRes->bind_param('i', $selected_cat);
+        $accRes->execute();
+        $result = $accRes->get_result();
     }
 
-    $accRes = $conn->prepare("
-        SELECT id, title, description,
-               price, status, tags, image, created_at
-        FROM social_accounts
-        WHERE category_id = ? AND status = 'available'
-        ORDER BY created_at DESC
-    ");
-    $accRes->bind_param('i', $selected_cat);
-    $accRes->execute();
-    $result = $accRes->get_result();
     while ($row = $result->fetch_assoc()) {
         preg_match('/\b(20\d{2})\b/', $row['title'] . ' ' . $row['created_at'], $matches);
         $row['year'] = $matches[1] ?? date('Y', strtotime($row['created_at']));
@@ -453,7 +508,7 @@ $selected_icon_url  = $selected_icon_data ? getSimpleIconUrl($selected_icon_data
 <!-- TOP BAR -->
 <div class="topbar">
     <?php if ($selected_cat): ?>
-        <a href="/api/social_accounts.php" class="topbar-back"><i class="fas fa-arrow-left"></i></a>
+        <a href="/api/social_accounts.php" class="topbar-back" onclick="history.back();return false;"><i class="fas fa-arrow-left"></i></a>
         <div class="topbar-info">
             <div class="topbar-title"><?php echo htmlspecialchars($selected_cat_name); ?></div>
             <div class="topbar-subtitle">Available Accounts</div>
@@ -490,7 +545,7 @@ $selected_icon_url  = $selected_icon_data ? getSimpleIconUrl($selected_icon_data
         $color    = $cat['color'] ?: '#6A00DF';
         $firstLetter = strtoupper(substr($cat['name'], 0, 1));
     ?>
-    <a href="/api/social_accounts.php?cat=<?php echo $cat['id']; ?>"
+    <a href="/api/social_accounts.php?cat=<?php echo htmlspecialchars($cat['id']); ?>"
        class="folder-card"
        style="--cat-color: <?php echo htmlspecialchars($color); ?>"
        data-name="<?php echo strtolower(htmlspecialchars($cat['name'])); ?>">
