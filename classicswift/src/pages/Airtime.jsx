@@ -133,19 +133,27 @@ export default function Airtime() {
   const [recentContacts, setRecentContacts] = useState([]);
 
   useEffect(() => {
+    const FALLBACK = [
+      { id:1, network:"MTN"     },
+      { id:2, network:"Airtel"  },
+      { id:3, network:"Glo"     },
+      { id:4, network:"9mobile" },
+    ];
     fetch(`${POINTLY_API_BASE}/vtu/networks`, {
       headers: { "X-API-Key": POINTLY_API_KEY }
     })
       .then(r => r.json())
       .then(data => {
-        if (data.success && data.data?.length) {
-          setNetworks(data.data);
-          setNetwork(data.data[0]);
-        } else {
-          setNetsError("Could not load networks.");
-        }
+        let nets = (data.success && data.data?.length) ? data.data : FALLBACK;
+        const has9 = nets.some(n => {
+          const k = n.network?.toLowerCase().replace(/\s/g,"");
+          return k === "9mobile" || k === "etisalat";
+        });
+        if (!has9) nets = [...nets, { id:4, network:"9mobile" }];
+        setNetworks(nets);
+        setNetwork(nets[0]);
       })
-      .catch(() => setNetsError("Network error. Please try again."))
+      .catch(() => { setNetworks(FALLBACK); setNetwork(FALLBACK[0]); })
       .finally(() => setNetsLoading(false));
   }, []);
 
