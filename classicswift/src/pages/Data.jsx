@@ -1,15 +1,35 @@
 import { useState, useEffect } from "react";
 import WhatsAppFloat from "../components/WhatsAppFloat";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "../firebase";
 import { useNavigate } from "react-router-dom";
 
-const NETWORKS = [
-  { id:"MTN",  network:"MTN",     code:"MTN",  bg:"#FFC107", color:"#111",    text:"MTN"     },
-  { id:"AIR",  network:"Airtel",  code:"AIR",  bg:"#EF4444", color:"#fff",    text:"Airtel"  },
-  { id:"GLO",  network:"Glo",     code:"GLO",  bg:"#10B881", color:"#fff",    text:"Glo"     },
-  { id:"9MB",  network:"9mobile", code:"9MB",  bg:"#111B27", color:"#FFC107", text:"9mobile" },
-];
+const POINTLY_API_BASE = "https://www.pointly.com.ng/api/v2";
+const POINTLY_API_KEY  = "24c5fdb22b9a94a3f50c95dd4fa59c28a8ed79384ec78b7df933e192ee1b767e";
+
+const NET_CONFIG = {
+  mtn:       { bg:"#FFC107", color:"#111",    text:"MTN"     },
+  airtel:    { bg:"#EF4444", color:"#fff",    text:"Airtel"  },
+  glo:       { bg:"#10B881", color:"#fff",    text:"Glo"     },
+  "9mobile": { bg:"#111B27", color:"#FFC107", text:"9mobile" },
+  etisalat:  { bg:"#111B27", color:"#FFC107", text:"9mobile" },
+  "9":       { bg:"#111B27", color:"#FFC107", text:"9mobile" },
+};
+
+function getNetConfig(networkName) {
+  const key = networkName?.toLowerCase().replace(/\s/g,"").replace(/-/g,"");
+  return NET_CONFIG[key] || { bg:"#6A00DF", color:"#fff", text: networkName?.slice(0,6) || "N" };
+}
+
+// Handle all response shapes Pointly might return for data plans
+function extractPlans(data) {
+  if (!data || !data.success) return [];
+  const d = data.data;
+  if (!d) return [];
+  if (Array.isArray(d.data_plans) && d.data_plans.length) return d.data_plans;
+  if (Array.isArray(d.plans)      && d.plans.length)      return d.plans;
+  if (Array.isArray(d)            && d.length)            return d;
+  if (Array.isArray(d.data)       && d.data.length)       return d.data;
+  return [];
+}
 
 const STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
@@ -43,16 +63,26 @@ const STYLES = `
   .dt-input { flex:1; height:54px; border:none; outline:none; font-family:'Poppins',sans-serif; font-size:15px; color:#111B27; background:transparent; }
   .dt-input::placeholder { color:#C4BDD6; }
 
-  .dt-plans-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-  .dt-plan-card { background:#fff; border:1.5px solid #E8E4F0; border-radius:14px; padding:14px; cursor:pointer; transition:all .2s; }
-  .dt-plan-card.active { border-color:#6A00DF; background:#F0ECF9; }
-  .dt-plan-size { font-size:17px; font-weight:800; color:#111B27; }
-  .dt-plan-card.active .dt-plan-size { color:#6A00DF; }
-  .dt-plan-validity { font-size:11px; font-weight:500; color:#9ca3af; margin-top:2px; }
-  .dt-plan-price { font-size:14px; font-weight:700; color:#6A00DF; margin-top:6px; }
+  .dt-tabs { display:flex; background:#fff; border-radius:14px; padding:4px; gap:4px; overflow-x:auto; margin-bottom:12px; }
+  .dt-tab { flex:1; min-width:fit-content; height:38px; border-radius:10px; border:none; font-family:'Poppins',sans-serif; font-size:13px; font-weight:600; color:#9ca3af; cursor:pointer; background:transparent; transition:all .2s; white-space:nowrap; padding:0 12px; }
+  .dt-tab.active { background:#6A00DF; color:#fff; box-shadow:0 4px 12px rgba(106,0,223,.25); }
 
-  .dt-plans-loading { display:flex; justify-content:center; padding:24px; }
-  .dt-plans-empty { text-align:center; padding:24px; color:#9ca3af; font-size:13px; }
+  .dt-plans-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+  .dt-plan-card { background:#fff; border-radius:16px; border:2px solid #E8E4F0; padding:14px 12px; cursor:pointer; position:relative; transition:border-color .2s, box-shadow .2s; display:flex; flex-direction:column; gap:4px; }
+  .dt-plan-card.active { border-color:#6A00DF; background:#F8F5FF; box-shadow:0 4px 16px rgba(106,0,223,.14); }
+  .dt-plan-radio { position:absolute; top:12px; right:12px; width:20px; height:20px; border-radius:50%; border:2px solid #D5CDF0; background:#fff; display:flex; align-items:center; justify-content:center; transition:all .2s; }
+  .dt-plan-card.active .dt-plan-radio { border-color:#6A00DF; background:#6A00DF; }
+  .dt-plan-size { font-size:20px; font-weight:800; color:#111B27; letter-spacing:-.4px; }
+  .dt-plan-card.active .dt-plan-size { color:#6A00DF; }
+  .dt-plan-validity { font-size:11.5px; font-weight:500; color:#9ca3af; margin-top:2px; }
+  .dt-plan-price { font-size:15px; font-weight:800; color:#111B27; margin-top:6px; }
+  .dt-plan-card.active .dt-plan-price { color:#6A00DF; }
+  .dt-plan-category { display:inline-block; background:#F0ECF9; color:#6A00DF; font-size:10px; font-weight:700; border-radius:999px; padding:2px 8px; margin-top:4px; }
+
+  .dt-banner { background:#F0ECF9; border-radius:14px; padding:14px 16px; display:flex; align-items:center; gap:12px; }
+  .dt-banner-icon { width:40px; height:40px; border-radius:12px; background:#fff; display:flex; align-items:center; justify-content:center; flex-shrink:0; color:#6A00DF; }
+  .dt-banner-title { font-size:13.5px; font-weight:600; color:#111B27; }
+  .dt-banner-sub { font-size:12px; color:#9ca3af; margin-top:2px; }
 
   .dt-bottom { position:fixed; bottom:74px; left:0; right:0; padding:10px 20px 12px; background:#f4f3f8; border-top:1.5px solid #EDE8F8; }
   .dt-buy-btn { width:100%; height:58px; background:linear-gradient(135deg,#6A00DF,#8B3DFF); border:none; border-radius:16px; font-family:'Poppins',sans-serif; font-size:16px; font-weight:800; color:#fff; cursor:pointer; box-shadow:0 8px 24px rgba(106,0,223,.3); transition:transform .15s, opacity .15s; }
@@ -65,12 +95,17 @@ const STYLES = `
   .dt-nav-item.active .dt-nav-label { color:#6A00DF; font-weight:700; }
   .dt-error-msg { font-size:12px; color:#EF4444; font-weight:500; margin-top:6px; }
   .dt-spinner { width:18px; height:18px; border:2.5px solid rgba(106,0,223,.3); border-top-color:#6A00DF; border-radius:50%; animation:spin .7s linear infinite; margin:0 auto; }
+  .dt-loading { display:flex; justify-content:center; padding:20px 0; }
+  .dt-load-error { font-size:13px; color:#EF4444; text-align:center; padding:12px 0; }
+  .dt-empty { font-size:13px; color:#9ca3af; text-align:center; padding:20px 0; }
 `;
 
 const BackIcon     = () => (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>);
 const HistIcon     = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="12 8 12 12 14 14"/><path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5"/></svg>);
 const PhoneIcon    = () => (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.74a16 16 0 0 0 6.29 6.29l.95-.96a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>);
+const WifiIcon     = () => (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6A00DF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M10.54 16.1a6 6 0 0 1 2.92 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>);
 const CheckSmall   = () => (<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6L5 9L10 3" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>);
+const CheckRadio   = () => (<svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2 6L5 9L10 3" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>);
 
 const HomeNavIcon    = ({active}) => (<svg width="22" height="22" viewBox="0 0 24 24" fill={active?"#6A00DF":"none"} stroke={active?"#6A00DF":"#9ca3af"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>);
 const AirtimeNavIcon = ({active}) => (<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active?"#6A00DF":"#9ca3af"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>);
@@ -86,99 +121,89 @@ const NAV = [
   { label:"Profile", Icon:ProfileNavIcon, path:"/profile"   },
 ];
 
-// Default plans used when Firestore has no saved pricing yet
-const DEFAULT_PLANS = {
-  MTN: [
-    { id:"mtn-50mb",  size:"50MB",  validity:"1 Day",   sellingPrice:60   },
-    { id:"mtn-100mb", size:"100MB", validity:"1 Day",   sellingPrice:110  },
-    { id:"mtn-200mb", size:"200MB", validity:"3 Days",  sellingPrice:185  },
-    { id:"mtn-500mb", size:"500MB", validity:"7 Days",  sellingPrice:320  },
-    { id:"mtn-1gb",   size:"1GB",   validity:"30 Days", sellingPrice:310  },
-    { id:"mtn-2gb",   size:"2GB",   validity:"30 Days", sellingPrice:550  },
-    { id:"mtn-3gb",   size:"3GB",   validity:"30 Days", sellingPrice:800  },
-    { id:"mtn-5gb",   size:"5GB",   validity:"30 Days", sellingPrice:1300 },
-    { id:"mtn-10gb",  size:"10GB",  validity:"30 Days", sellingPrice:2500 },
-    { id:"mtn-20gb",  size:"20GB",  validity:"30 Days", sellingPrice:4300 },
-  ],
-  AIR: [
-    { id:"air-100mb", size:"100MB", validity:"1 Day",   sellingPrice:105  },
-    { id:"air-200mb", size:"200MB", validity:"3 Days",  sellingPrice:175  },
-    { id:"air-500mb", size:"500MB", validity:"7 Days",  sellingPrice:300  },
-    { id:"air-1gb",   size:"1GB",   validity:"30 Days", sellingPrice:300  },
-    { id:"air-2gb",   size:"2GB",   validity:"30 Days", sellingPrice:530  },
-    { id:"air-3gb",   size:"3GB",   validity:"30 Days", sellingPrice:780  },
-    { id:"air-5gb",   size:"5GB",   validity:"30 Days", sellingPrice:1250 },
-    { id:"air-10gb",  size:"10GB",  validity:"30 Days", sellingPrice:2400 },
-    { id:"air-20gb",  size:"20GB",  validity:"30 Days", sellingPrice:4000 },
-  ],
-  GLO: [
-    { id:"glo-100mb", size:"100MB", validity:"1 Day",   sellingPrice:100  },
-    { id:"glo-200mb", size:"200MB", validity:"3 Days",  sellingPrice:170  },
-    { id:"glo-500mb", size:"500MB", validity:"7 Days",  sellingPrice:290  },
-    { id:"glo-1gb",   size:"1GB",   validity:"30 Days", sellingPrice:290  },
-    { id:"glo-2gb",   size:"2GB",   validity:"30 Days", sellingPrice:520  },
-    { id:"glo-3gb",   size:"3GB",   validity:"30 Days", sellingPrice:750  },
-    { id:"glo-5gb",   size:"5GB",   validity:"30 Days", sellingPrice:1200 },
-    { id:"glo-10gb",  size:"10GB",  validity:"30 Days", sellingPrice:2300 },
-    { id:"glo-20gb",  size:"20GB",  validity:"30 Days", sellingPrice:3800 },
-  ],
-  "9MB": [
-    { id:"9mb-100mb", size:"100MB", validity:"1 Day",   sellingPrice:102  },
-    { id:"9mb-200mb", size:"200MB", validity:"3 Days",  sellingPrice:172  },
-    { id:"9mb-500mb", size:"500MB", validity:"7 Days",  sellingPrice:295  },
-    { id:"9mb-1gb",   size:"1GB",   validity:"30 Days", sellingPrice:295  },
-    { id:"9mb-2gb",   size:"2GB",   validity:"30 Days", sellingPrice:525  },
-    { id:"9mb-3gb",   size:"3GB",   validity:"30 Days", sellingPrice:760  },
-    { id:"9mb-5gb",   size:"5GB",   validity:"30 Days", sellingPrice:1240 },
-    { id:"9mb-10gb",  size:"10GB",  validity:"30 Days", sellingPrice:2350 },
-    { id:"9mb-20gb",  size:"20GB",  validity:"30 Days", sellingPrice:3900 },
-  ],
-};
+// 9mobile fallback — injected if Pointly API doesn't return it
+const NINEMOBILE_FALLBACK = { id: 4, network: "9mobile" };
 
 export default function Data() {
   const navigate = useNavigate();
 
-  const [network,      setNetwork]      = useState(NETWORKS[0]);
-  const [allPlans,     setAllPlans]     = useState(DEFAULT_PLANS);
-  const [plansLoading, setPlansLoading] = useState(true);
+  const [networks,     setNetworks]     = useState([]);
+  const [netsLoading,  setNetsLoading]  = useState(true);
+  const [network,      setNetwork]      = useState(null);
+
+  const [allPlans,     setAllPlans]     = useState([]);
+  const [plansLoading, setPlansLoading] = useState(false);
+  const [plansError,   setPlansError]   = useState("");
+  const [categories,   setCategories]   = useState([]);
+  const [activeTab,    setActiveTab]    = useState("");
+  const [plan,         setPlan]         = useState(null);
 
   const [phone,  setPhone]  = useState("");
-  const [plan,   setPlan]   = useState(null);
   const [errors, setErrors] = useState({});
 
-  // Load pricing from Firestore (set by admin in AdminPricing)
+  // Fetch networks, inject 9mobile if missing
   useEffect(() => {
-    const load = async () => {
-      try {
-        const snaps = await Promise.all(
-          NETWORKS.map(n => getDoc(doc(db, "pricing", `data_${n.code}`)))
-        );
-        const loaded = {};
-        NETWORKS.forEach((n, i) => {
-          const snap = snaps[i];
-          if (snap.exists()) {
-            const saved = snap.data();
-            loaded[n.code] = DEFAULT_PLANS[n.code].map(p => ({
-              ...p,
-              sellingPrice: saved[p.id]?.sellingPrice ?? p.sellingPrice,
-            }));
-          }
+    fetch(`${POINTLY_API_BASE}/vtu/networks`, {
+      headers: { "X-API-Key": POINTLY_API_KEY }
+    })
+      .then(r => r.json())
+      .then(data => {
+        let nets = (data.success && Array.isArray(data.data)) ? data.data : [];
+        // Inject 9mobile if the API didn't return it
+        const has9mobile = nets.some(n => {
+          const k = n.network?.toLowerCase().replace(/\s/g,"");
+          return k === "9mobile" || k === "etisalat" || k === "9";
         });
-        if (Object.keys(loaded).length) {
-          setAllPlans(prev => ({ ...prev, ...loaded }));
-        }
-      } catch (err) {
-        console.error("Failed to load pricing:", err);
-      }
-      setPlansLoading(false);
-    };
-    load();
+        if (!has9mobile) nets = [...nets, NINEMOBILE_FALLBACK];
+        setNetworks(nets);
+        setNetwork(nets[0] || null);
+      })
+      .catch(() => {
+        // If API totally fails, show all 4 hardcoded
+        const fallback = [
+          { id:1, network:"MTN"     },
+          { id:2, network:"Airtel"  },
+          { id:3, network:"Glo"     },
+          { id:4, network:"9mobile" },
+        ];
+        setNetworks(fallback);
+        setNetwork(fallback[0]);
+      })
+      .finally(() => setNetsLoading(false));
   }, []);
 
-  // Reset plan when network changes
-  useEffect(() => { setPlan(null); }, [network]);
+  // Fetch data plans when network changes
+  useEffect(() => {
+    if (!network) return;
+    setPlansLoading(true);
+    setPlansError("");
+    setPlan(null);
+    setAllPlans([]);
+    setCategories([]);
+    setActiveTab("");
 
-  const plans = allPlans[network.code] || [];
+    fetch(`${POINTLY_API_BASE}/vtu/data-plans?network_id=${network.id}&limit=200`, {
+      headers: { "X-API-Key": POINTLY_API_KEY }
+    })
+      .then(r => r.json())
+      .then(data => {
+        const plans = extractPlans(data);
+        if (plans.length) {
+          setAllPlans(plans);
+          const cats = [...new Set(plans.map(p => p.category).filter(Boolean))];
+          setCategories(cats);
+          setActiveTab(cats[0] || "");
+        } else {
+          setPlansError("No data plans available for this network.");
+        }
+      })
+      .catch(() => setPlansError("Failed to load data plans. Please try again."))
+      .finally(() => setPlansLoading(false));
+  }, [network]);
+
+  const filteredPlans = activeTab
+    ? allPlans.filter(p => p.category === activeTab)
+    : allPlans;
 
   const validate = () => {
     const e = {};
@@ -190,11 +215,21 @@ export default function Data() {
   const handleBuy = () => {
     const e = validate();
     if (Object.keys(e).length) { setErrors(e); return; }
+    const cfg = getNetConfig(network.network);
     navigate("/data/confirm", {
       state: {
-        network: { id: network.id, network_id: network.id, name: network.network, bg: network.bg, color: network.color, text: network.text },
+        network: { ...cfg, id: network.id, network_id: network.id, name: network.network },
         phone,
-        plan,
+        plan: {
+          id:        plan.id,
+          plan_id:   plan.id,
+          size:      plan.data_size,
+          data_size: plan.data_size,
+          validity:  plan.validity,
+          price:     `₦${Number(plan.price).toLocaleString()}`,
+          priceRaw:  plan.price,
+          category:  plan.category,
+        },
       }
     });
   };
@@ -204,6 +239,7 @@ export default function Data() {
       <style>{STYLES}</style>
       <div className="dt-root">
         <div className="dt-scroll">
+
           <div className="dt-topbar">
             <button className="dt-back" onClick={() => navigate("/dashboard")}><BackIcon /></button>
             <span className="dt-title">Buy Data</span>
@@ -212,20 +248,25 @@ export default function Data() {
 
           <div className="dt-section">
             <div className="dt-label">Select Network</div>
-            <div className="dt-networks">
-              {NETWORKS.map(n => {
-                const isActive = network.id === n.id;
-                return (
-                  <div className="dt-net-item" key={n.id} onClick={() => setNetwork(n)}>
-                    <div className={`dt-net-logo${isActive ? " active" : ""}`} style={{background: n.bg}}>
-                      <span style={{fontSize: n.text.length > 3 ? 10 : 14, fontWeight:900, color:n.color}}>{n.text}</span>
-                      {isActive && <div className="dt-net-check"><CheckSmall /></div>}
+            {netsLoading ? (
+              <div className="dt-loading"><div className="dt-spinner"/></div>
+            ) : (
+              <div className="dt-networks">
+                {networks.map(n => {
+                  const cfg = getNetConfig(n.network);
+                  const isActive = network?.id === n.id;
+                  return (
+                    <div className="dt-net-item" key={n.id} onClick={() => setNetwork(n)}>
+                      <div className={`dt-net-logo${isActive ? " active" : ""}`} style={{background: cfg.bg}}>
+                        <span style={{fontSize: cfg.text.length > 3 ? 10 : 14, fontWeight:900, color:cfg.color}}>{cfg.text}</span>
+                        {isActive && <div className="dt-net-check"><CheckSmall /></div>}
+                      </div>
+                      <span className="dt-net-name">{cfg.text === "9mobile" ? "9mobile" : n.network}</span>
                     </div>
-                    <span className="dt-net-name">{n.network}</span>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <div className="dt-section">
@@ -243,26 +284,61 @@ export default function Data() {
           <div className="dt-section">
             <div className="dt-label">Data Plan</div>
             {plansLoading ? (
-              <div className="dt-plans-loading"><div className="dt-spinner"/></div>
+              <div className="dt-loading"><div className="dt-spinner"/></div>
+            ) : plansError ? (
+              <div className="dt-load-error">{plansError}</div>
             ) : (
-              <div className="dt-plans-grid">
-                {plans.map(p => (
-                  <div key={p.id} className={`dt-plan-card${plan?.id === p.id ? " active" : ""}`}
-                    onClick={() => { setPlan(p); setErrors(e => ({...e, plan:""})); }}>
-                    <div className="dt-plan-size">{p.size}</div>
-                    <div className="dt-plan-validity">{p.validity}</div>
-                    <div className="dt-plan-price">₦{Number(p.sellingPrice).toLocaleString()}</div>
+              <>
+                {categories.length > 0 && (
+                  <div className="dt-tabs">
+                    {categories.map(cat => (
+                      <button key={cat}
+                        className={`dt-tab${activeTab === cat ? " active" : ""}`}
+                        onClick={() => { setActiveTab(cat); setPlan(null); }}>
+                        {cat}
+                      </button>
+                    ))}
                   </div>
-                ))}
-              </div>
+                )}
+                {filteredPlans.length === 0 ? (
+                  <div className="dt-empty">No plans in this category.</div>
+                ) : (
+                  <div className="dt-plans-grid">
+                    {filteredPlans.map(p => (
+                      <div key={p.id}
+                        className={`dt-plan-card${plan?.id === p.id ? " active" : ""}`}
+                        onClick={() => { setPlan(p); setErrors(e => ({...e, plan:""})); }}>
+                        <div className="dt-plan-radio">
+                          {plan?.id === p.id && <CheckRadio />}
+                        </div>
+                        <div className="dt-plan-size">{p.data_size}</div>
+                        <div className="dt-plan-validity">{p.validity}</div>
+                        <div className="dt-plan-price">₦{Number(p.price).toLocaleString()}</div>
+                        {p.category && <span className="dt-plan-category">{p.category}</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {errors.plan && <div className="dt-error-msg" style={{marginTop:8}}>{errors.plan}</div>}
+              </>
             )}
-            {errors.plan && <div className="dt-error-msg" style={{marginTop:8}}>{errors.plan}</div>}
           </div>
+
+          <div className="dt-section" style={{marginBottom:8}}>
+            <div className="dt-banner">
+              <div className="dt-banner-icon"><WifiIcon /></div>
+              <div>
+                <div className="dt-banner-title">Stay connected, always</div>
+                <div className="dt-banner-sub">Fast and reliable internet on the go.</div>
+              </div>
+            </div>
+          </div>
+
         </div>
 
         <div className="dt-bottom">
-          <button className="dt-buy-btn" onClick={handleBuy} disabled={plansLoading || !plan}>
-            {plan ? `Buy ${plan.size} for ₦${Number(plan.sellingPrice).toLocaleString()}` : "Continue"}
+          <button className="dt-buy-btn" onClick={handleBuy} disabled={!plan || plansLoading}>
+            {plan ? `Continue — ₦${Number(plan.price).toLocaleString()}` : "Continue"}
           </button>
         </div>
 
