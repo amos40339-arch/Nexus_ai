@@ -111,6 +111,8 @@ try {
     }
 
     // ── 2. SOCIAL / DIGITAL ACCOUNTS ─────────────────────────────────
+    // Always show 1 Facebook account — if none available fall back to
+    // the most recent available account from any platform.
     $socialQuery = "
         SELECT
             sa.id,
@@ -128,9 +130,37 @@ try {
         FROM social_accounts sa
         LEFT JOIN social_categories sc ON sa.category_id = sc.id
         WHERE sa.status = 'available'
+          AND LOWER(sc.name) LIKE '%facebook%'
         ORDER BY sa.created_at DESC
-        LIMIT 6
+        LIMIT 1
     ";
+    $sResult = $conn->query($socialQuery);
+    // If no Facebook accounts available, fall back to most recent account
+    if (!$sResult || $sResult->num_rows === 0) {
+        $socialQuery = "
+            SELECT
+                sa.id,
+                sa.title,
+                sa.description,
+                sa.price,
+                sa.status,
+                sa.tags,
+                sa.image,
+                sa.created_at,
+                sc.id    AS category_id,
+                sc.name  AS platform_name,
+                sc.icon  AS platform_icon,
+                sc.color AS platform_color
+            FROM social_accounts sa
+            LEFT JOIN social_categories sc ON sa.category_id = sc.id
+            WHERE sa.status = 'available'
+            ORDER BY sa.created_at DESC
+            LIMIT 1
+        ";
+        $sResult = $conn->query($socialQuery);
+    }
+    // Dummy query placeholder to keep code flow intact
+    $socialQuery = "";
     $sResult = $conn->query($socialQuery);
     if ($sResult) {
         while ($row = $sResult->fetch_assoc()) {
