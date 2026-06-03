@@ -127,25 +127,48 @@ export default function AdminPricing() {
   const [saving,    setSaving]    = useState(false);
   const [toast,     setToast]     = useState(null);
 
-  // Load saved prices from Firestore on mount
+  // Load plans: real API plans from plan_cache (written by Data.jsx), merged with admin selling prices
   useEffect(() => {
     (async () => {
       try {
-        const [airtimeSnap, ...netSnaps] = await Promise.all([
+        const [airtimeSnap, ...snaps] = await Promise.all([
           getDoc(doc(db, "pricing", "airtime")),
-          ...NETWORKS.map(n => getDoc(doc(db, "pricing", `data_${n.code}`))),
+          ...NETWORKS.map(n => Promise.all([
+            getDoc(doc(db, "plan_cache", n.code)),
+            getDoc(doc(db, "pricing", `data_${n.code}`)),
+          ])),
         ]);
         if (airtimeSnap.exists()) setAirtime(airtimeSnap.data());
 
         const merged = { ...DEFAULT_PLANS };
         NETWORKS.forEach((n, i) => {
-          const snap = netSnaps[i];
-          if (snap.exists()) {
-            const saved = snap.data();
+          const [cacheSnap, pricingSnap] = snaps[i];
+          const adminPrices = pricingSnap.exists() ? pricingSnap.data() : {};
+
+          if (cacheSnap.exists()) {
+            // Build plan list from real API cache
+            const cache = cacheSnap.data();
+            merged[n.code] = Object.entries(cache).map(([id, p]) => ({
+              id,
+              size:         p.data_size || id,
+              validity:     p.validity  || "",
+              cost:         adminPrices[id]?.cost         ?? Number(p.price) ?? 0,
+              sellingPrice: adminPrices[id]?.sellingPrice ?? Math.ceil(Number(p.price) * 1.15),
+            })).sort((a,b) => {
+              // Sort by size ascending
+              const toMB = s => {
+                if (!s) return 0;
+                if (s.includes("GB")) return parseFloat(s)*1024;
+                return parseFloat(s);
+              };
+              return toMB(a.size) - toMB(b.size);
+            });
+          } else if (pricingSnap.exists()) {
+            // Fall back to saved admin prices if no cache yet
             merged[n.code] = DEFAULT_PLANS[n.code].map(p => ({
               ...p,
-              sellingPrice: saved[p.id]?.sellingPrice ?? p.sellingPrice,
-              cost:         saved[p.id]?.cost         ?? p.cost,
+              sellingPrice: adminPrices[p.id]?.sellingPrice ?? p.sellingPrice,
+              cost:         adminPrices[p.id]?.cost         ?? p.cost,
             }));
           }
         });
@@ -195,14 +218,14 @@ export default function AdminPricing() {
   const currentPlans = dataPlans[network] || [];
 
   if (loading) return (
-    <Layout title="Pricing Manager" subtitle="Set your data plan and airtime prices">
+    <Layout title="Pricing Manager" subtitle="Plans auto-sync from API when users open the Data page">
       <style>{STYLES}</style>
       <div className="ap-loading"><div className="ap-load-spinner"/></div>
     </Layout>
   );
 
   return (
-    <Layout title="Pricing Manager" subtitle="Edit prices below — changes save instantly to ClassicSwift">
+    <Layout title="Pricing Manager" subtitle="Plans auto-sync from API when users open the Data page">
       <style>{STYLES}</style>
 
       <div className="ap-tabs">

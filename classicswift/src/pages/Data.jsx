@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import WhatsAppFloat from "../components/WhatsAppFloat";
 import { useNavigate } from "react-router-dom";
+import { doc, setDoc, getDoc } from "firebase/firestore";
+import { db } from "../firebase";
 
 const POINTLY_API_BASE = "https://www.pointly.com.ng/api/v2";
 const POINTLY_API_KEY  = "24c5fdb22b9a94a3f50c95dd4fa59c28a8ed79384ec78b7df933e192ee1b767e";
@@ -182,13 +184,34 @@ export default function Data() {
     setCategories([]);
     setActiveTab("");
 
+    // Map network id → admin pricing code
+    const codeMap = { 1:"MTN", 2:"AIR", 3:"GLO", 4:"9MB" };
+    const netCode = codeMap[network.id] || null;
+
     fetch(`${POINTLY_API_BASE}/vtu/data-plans?network_id=${network.id}&limit=200`, {
       headers: { "X-API-Key": POINTLY_API_KEY }
     })
       .then(r => r.json())
-      .then(data => {
+      .then(async data => {
         const plans = extractPlans(data);
         if (plans.length) {
+          // Cache plans to Firestore so AdminPricing can read them
+          if (netCode) {
+            try {
+              const cacheDoc = {};
+              plans.forEach(p => { cacheDoc[p.id] = { data_size: p.data_size, validity: p.validity, price: p.price, category: p.category || "" }; });
+              await setDoc(doc(db, "plan_cache", netCode), cacheDoc, { merge: true });
+
+              // Overlay admin selling prices if set
+              const adminSnap = await getDoc(doc(db, "pricing", `data_${netCode}`));
+              if (adminSnap.exists()) {
+                const adminPrices = adminSnap.data();
+                plans.forEach(p => {
+                  if (adminPrices[p.id]?.sellingPrice) p.price = adminPrices[p.id].sellingPrice;
+                });
+              }
+            } catch(_) {}
+          }
           setAllPlans(plans);
           const cats = [...new Set(plans.map(p => p.category).filter(Boolean))];
           setCategories(cats);
