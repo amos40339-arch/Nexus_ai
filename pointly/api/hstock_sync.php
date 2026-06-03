@@ -329,9 +329,8 @@ $stats = [
     'errors'            => [],
 ];
 
-// ── Single-category shortcut (avoids timeout on shared hosting) ──────────────
-// Usage: ?token=pL9mK2xQ7nR4wB8vT3&category=Gmail
-// Run each category separately via the list returned by ?token=...&list_categories=1
+// ── Single-category shortcut ─────────────────────────────────────────────────
+// Usage: ?token=...&category=Gmail
 if ($singleCategory !== '') {
     $globalSeen = [];
     $catItems   = fetchCategory($singleCategory);
@@ -343,11 +342,7 @@ if ($singleCategory !== '') {
         try { processItem($conn, $p, $stats); } catch (Throwable $e) { $stats['errors'][] = $e->getMessage(); }
     }
     $stats['per_category'][$singleCategory] = $stats['products_fetched'];
-    echo json_encode([
-        'success'  => true,
-        'message'  => 'Single-category sync complete: ' . $singleCategory,
-        'stats'    => $stats,
-    ], JSON_PRETTY_PRINT);
+    echo json_encode(['success' => true, 'message' => 'Single-category sync complete: ' . $singleCategory, 'stats' => $stats], JSON_PRETTY_PRINT);
     exit;
 }
 
@@ -487,11 +482,32 @@ if (empty($hstockCategories)) {
     exit;
 }
 
-// ── Step 2: Fetch every product in every category ────────────────────────────
+// ── Step 2: Batch mode — sync N categories per run ───────────────────────────
+// Usage: ?token=...&batch=50&offset=0   → categories 0-49
+//        ?token=...&batch=50&offset=50  → categories 50-99
+//        ?token=...                     → all (may timeout if >3000 categories)
+$batchSize  = max(1, (int) ($_GET['batch']  ?? 0));
+$offset     = max(0, (int) ($_GET['offset'] ?? 0));
+
 $stats['categories_found'] = count($hstockCategories);
+$stats['batch_total']      = count($hstockCategories);
+$stats['batch_offset']     = $offset;
+$stats['batch_size']       = $batchSize ?: count($hstockCategories);
+
+// Slice the category list for this batch
+$categoriesToProcess = $batchSize > 0
+    ? array_slice($hstockCategories, $offset, $batchSize)
+    : $hstockCategories;
+
+$nextOffset = $offset + count($categoriesToProcess);
+$stats['next_offset'] = $nextOffset < count($hstockCategories) ? $nextOffset : null;
+$stats['next_url']    = $stats['next_offset'] !== null
+    ? '?token=' . SYNC_TOKEN . '&batch=' . ($batchSize ?: 50) . '&offset=' . $stats['next_offset']
+    : null;
+
 $globalSeen = [];
 
-foreach ($hstockCategories as $catName) {
+foreach ($categoriesToProcess as $catName) {
     sleep(1);
     $catItems = fetchCategory($catName);
     $catNew   = 0;
