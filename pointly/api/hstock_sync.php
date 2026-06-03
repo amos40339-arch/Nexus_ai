@@ -358,14 +358,22 @@ if (!empty($_GET['list_categories'])) {
         if ($parentName === '') continue;
         if (isBlockedParentCat($parentName)) { $blocked[] = $parentName; continue; }
         $parsed[] = $parentName;
-        $subs = $group['subcategories'] ?? $group['sub_categories'] ?? [];
-        if (!empty($subs) && is_array($subs)) {
-            foreach ($subs as $sub) {
-                $subName = is_string($sub) ? $sub : (string)($sub['name'] ?? $sub['category'] ?? '');
-                if ($subName !== '') $parsed[] = $subName;
-            }
-        }
     }
+    $curatedExtras = [
+        'Gmail', 'Hotmail', 'Outlook', 'Yahoo Mail', 'ProtonMail', 'Yandex Mail',
+        'Netflix', 'Spotify', 'Amazon Prime', 'Disney Plus', 'Hulu', 'Apple TV',
+        'Discord', 'Telegram', 'WhatsApp',
+        'Instagram', 'Facebook', 'TikTok', 'Twitter', 'Pinterest', 'Snapchat',
+        'Apple ID', 'Microsoft', 'Google Account',
+        'PayPal', 'Binance', 'Coinbase',
+        'NordVPN', 'ExpressVPN', 'VPN Account',
+        'Canva', 'Adobe', 'Grammarly',
+        'GitHub', 'LinkedIn',
+        'Twitch', 'Kick',
+        'Reddit', 'Quora',
+        'Xbox', 'PlayStation', 'Steam',
+    ];
+    foreach ($curatedExtras as $extra) $parsed[] = $extra;
     echo json_encode([
         'success'            => true,
         'total_to_sync'      => count(array_unique($parsed)),
@@ -417,16 +425,27 @@ if (!isset($catResponse['error'])) {
 
         // Add parent category name
         $hstockCategories[] = $parentName;
-
-        // Also add each subcategory name — they often return additional products
-        $subs = $group['subcategories'] ?? $group['sub_categories'] ?? [];
-        if (!empty($subs) && is_array($subs)) {
-            foreach ($subs as $sub) {
-                $subName = is_string($sub) ? $sub : (string)($sub['name'] ?? $sub['category'] ?? '');
-                if ($subName !== '') $hstockCategories[] = $subName;
-            }
-        }
     }
+
+    // Curated non-SMM subcategory names to fetch additional products
+    $curatedExtras = [
+        'Gmail', 'Hotmail', 'Outlook', 'Yahoo Mail', 'ProtonMail', 'Yandex Mail',
+        'Netflix', 'Spotify', 'Amazon Prime', 'Disney Plus', 'Hulu', 'Apple TV',
+        'Discord', 'Telegram', 'WhatsApp',
+        'Instagram', 'Facebook', 'TikTok', 'Twitter', 'Pinterest', 'Snapchat',
+        'Apple ID', 'Microsoft', 'Google Account',
+        'PayPal', 'Binance', 'Coinbase',
+        'NordVPN', 'ExpressVPN', 'VPN Account',
+        'Canva', 'Adobe', 'Grammarly',
+        'GitHub', 'LinkedIn',
+        'Twitch', 'Kick',
+        'Reddit', 'Quora',
+        'Xbox', 'PlayStation', 'Steam',
+    ];
+    foreach ($curatedExtras as $extra) {
+        $hstockCategories[] = $extra;
+    }
+
     $hstockCategories = array_values(array_unique($hstockCategories));
 }
 
