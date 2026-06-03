@@ -1,25 +1,15 @@
 import { useState, useEffect } from "react";
 import WhatsAppFloat from "../components/WhatsAppFloat";
-import { auth } from "../firebase";
-import { getUserTransactions } from "../services/transactionService";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../firebase";
 import { useNavigate } from "react-router-dom";
 
-const POINTLY_API_BASE = "https://www.pointly.com.ng/api/v2";
-const POINTLY_API_KEY  = "24c5fdb22b9a94a3f50c95dd4fa59c28a8ed79384ec78b7df933e192ee1b767e";
-
-const NET_CONFIG = {
-  mtn:       { bg:"#FFC107", color:"#111",    text:"MTN"    },
-  airtel:    { bg:"#EF4444", color:"#fff",    text:"Airtel" },
-  glo:       { bg:"#10B881", color:"#fff",    text:"Glo"    },
-  "9mobile": { bg:"#111B27", color:"#FFC107", text:"9mobile"},
-  etisalat:  { bg:"#111B27", color:"#FFC107", text:"9mobile"},
-  "9":       { bg:"#111B27", color:"#FFC107", text:"9mobile"},
-};
-
-function getNetConfig(networkName) {
-  const key = networkName?.toLowerCase().replace(/\s/g, "").replace(/-/g, "");
-  return NET_CONFIG[key] || { bg:"#6A00DF", color:"#fff", text: networkName?.slice(0,6) || "N" };
-}
+const NETWORKS = [
+  { id:"MTN",  network:"MTN",     code:"MTN",  bg:"#FFC107", color:"#111",    text:"MTN"     },
+  { id:"AIR",  network:"Airtel",  code:"AIR",  bg:"#EF4444", color:"#fff",    text:"Airtel"  },
+  { id:"GLO",  network:"Glo",     code:"GLO",  bg:"#10B881", color:"#fff",    text:"Glo"     },
+  { id:"9MB",  network:"9mobile", code:"9MB",  bg:"#111B27", color:"#FFC107", text:"9mobile" },
+];
 
 const STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
@@ -75,7 +65,6 @@ const STYLES = `
   .dt-nav-item.active .dt-nav-label { color:#6A00DF; font-weight:700; }
   .dt-error-msg { font-size:12px; color:#EF4444; font-weight:500; margin-top:6px; }
   .dt-spinner { width:18px; height:18px; border:2.5px solid rgba(106,0,223,.3); border-top-color:#6A00DF; border-radius:50%; animation:spin .7s linear infinite; margin:0 auto; }
-  .dt-net-error { font-size:13px; color:#EF4444; text-align:center; padding:12px 0; }
 `;
 
 const BackIcon     = () => (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>);
@@ -97,75 +86,113 @@ const NAV = [
   { label:"Profile", Icon:ProfileNavIcon, path:"/profile"   },
 ];
 
+// Default plans used when Firestore has no saved pricing yet
+const DEFAULT_PLANS = {
+  MTN: [
+    { id:"mtn-50mb",  size:"50MB",  validity:"1 Day",   sellingPrice:60   },
+    { id:"mtn-100mb", size:"100MB", validity:"1 Day",   sellingPrice:110  },
+    { id:"mtn-200mb", size:"200MB", validity:"3 Days",  sellingPrice:185  },
+    { id:"mtn-500mb", size:"500MB", validity:"7 Days",  sellingPrice:320  },
+    { id:"mtn-1gb",   size:"1GB",   validity:"30 Days", sellingPrice:310  },
+    { id:"mtn-2gb",   size:"2GB",   validity:"30 Days", sellingPrice:550  },
+    { id:"mtn-3gb",   size:"3GB",   validity:"30 Days", sellingPrice:800  },
+    { id:"mtn-5gb",   size:"5GB",   validity:"30 Days", sellingPrice:1300 },
+    { id:"mtn-10gb",  size:"10GB",  validity:"30 Days", sellingPrice:2500 },
+    { id:"mtn-20gb",  size:"20GB",  validity:"30 Days", sellingPrice:4300 },
+  ],
+  AIR: [
+    { id:"air-100mb", size:"100MB", validity:"1 Day",   sellingPrice:105  },
+    { id:"air-200mb", size:"200MB", validity:"3 Days",  sellingPrice:175  },
+    { id:"air-500mb", size:"500MB", validity:"7 Days",  sellingPrice:300  },
+    { id:"air-1gb",   size:"1GB",   validity:"30 Days", sellingPrice:300  },
+    { id:"air-2gb",   size:"2GB",   validity:"30 Days", sellingPrice:530  },
+    { id:"air-3gb",   size:"3GB",   validity:"30 Days", sellingPrice:780  },
+    { id:"air-5gb",   size:"5GB",   validity:"30 Days", sellingPrice:1250 },
+    { id:"air-10gb",  size:"10GB",  validity:"30 Days", sellingPrice:2400 },
+    { id:"air-20gb",  size:"20GB",  validity:"30 Days", sellingPrice:4000 },
+  ],
+  GLO: [
+    { id:"glo-100mb", size:"100MB", validity:"1 Day",   sellingPrice:100  },
+    { id:"glo-200mb", size:"200MB", validity:"3 Days",  sellingPrice:170  },
+    { id:"glo-500mb", size:"500MB", validity:"7 Days",  sellingPrice:290  },
+    { id:"glo-1gb",   size:"1GB",   validity:"30 Days", sellingPrice:290  },
+    { id:"glo-2gb",   size:"2GB",   validity:"30 Days", sellingPrice:520  },
+    { id:"glo-3gb",   size:"3GB",   validity:"30 Days", sellingPrice:750  },
+    { id:"glo-5gb",   size:"5GB",   validity:"30 Days", sellingPrice:1200 },
+    { id:"glo-10gb",  size:"10GB",  validity:"30 Days", sellingPrice:2300 },
+    { id:"glo-20gb",  size:"20GB",  validity:"30 Days", sellingPrice:3800 },
+  ],
+  "9MB": [
+    { id:"9mb-100mb", size:"100MB", validity:"1 Day",   sellingPrice:102  },
+    { id:"9mb-200mb", size:"200MB", validity:"3 Days",  sellingPrice:172  },
+    { id:"9mb-500mb", size:"500MB", validity:"7 Days",  sellingPrice:295  },
+    { id:"9mb-1gb",   size:"1GB",   validity:"30 Days", sellingPrice:295  },
+    { id:"9mb-2gb",   size:"2GB",   validity:"30 Days", sellingPrice:525  },
+    { id:"9mb-3gb",   size:"3GB",   validity:"30 Days", sellingPrice:760  },
+    { id:"9mb-5gb",   size:"5GB",   validity:"30 Days", sellingPrice:1240 },
+    { id:"9mb-10gb",  size:"10GB",  validity:"30 Days", sellingPrice:2350 },
+    { id:"9mb-20gb",  size:"20GB",  validity:"30 Days", sellingPrice:3900 },
+  ],
+};
+
 export default function Data() {
   const navigate = useNavigate();
 
-  const [networks,    setNetworks]    = useState([]);
-  const [netsLoading, setNetsLoading] = useState(true);
-  const [netsError,   setNetsError]   = useState("");
+  const [network,      setNetwork]      = useState(NETWORKS[0]);
+  const [allPlans,     setAllPlans]     = useState(DEFAULT_PLANS);
+  const [plansLoading, setPlansLoading] = useState(true);
 
-  const [network,     setNetwork]     = useState(null);
-  const [plans,       setPlans]       = useState([]);
-  const [plansLoading,setPlansLoading]= useState(false);
-  const [plansError,  setPlansError]  = useState("");
+  const [phone,  setPhone]  = useState("");
+  const [plan,   setPlan]   = useState(null);
+  const [errors, setErrors] = useState({});
 
-  const [phone,       setPhone]       = useState("");
-  const [plan,        setPlan]        = useState(null);
-  const [errors,      setErrors]      = useState({});
-
+  // Load pricing from Firestore (set by admin in AdminPricing)
   useEffect(() => {
-    fetch(`${POINTLY_API_BASE}/vtu/networks`, {
-      headers: { "X-API-Key": POINTLY_API_KEY }
-    })
-      .then(r => r.json())
-      .then(data => {
-        if (data.success && data.data?.length) {
-          setNetworks(data.data);
-          setNetwork(data.data[0]);
-        } else {
-          setNetsError("Could not load networks.");
+    const load = async () => {
+      try {
+        const snaps = await Promise.all(
+          NETWORKS.map(n => getDoc(doc(db, "pricing", `data_${n.code}`)))
+        );
+        const loaded = {};
+        NETWORKS.forEach((n, i) => {
+          const snap = snaps[i];
+          if (snap.exists()) {
+            const saved = snap.data();
+            loaded[n.code] = DEFAULT_PLANS[n.code].map(p => ({
+              ...p,
+              sellingPrice: saved[p.id]?.sellingPrice ?? p.sellingPrice,
+            }));
+          }
+        });
+        if (Object.keys(loaded).length) {
+          setAllPlans(prev => ({ ...prev, ...loaded }));
         }
-      })
-      .catch(() => setNetsError("Network error. Please try again."))
-      .finally(() => setNetsLoading(false));
+      } catch (err) {
+        console.error("Failed to load pricing:", err);
+      }
+      setPlansLoading(false);
+    };
+    load();
   }, []);
 
-  useEffect(() => {
-    if (!network) return;
-    setPlans([]);
-    setPlan(null);
-    setPlansError("");
-    setPlansLoading(true);
-    fetch(`${POINTLY_API_BASE}/vtu/data-plans?network=${encodeURIComponent(network.id || network.network)}`, {
-      headers: { "X-API-Key": POINTLY_API_KEY }
-    })
-      .then(r => r.json())
-      .then(data => {
-        if (data.success && data.data?.length) {
-          setPlans(data.data);
-        } else {
-          setPlansError("No data plans available for this network.");
-        }
-      })
-      .catch(() => setPlansError("Failed to load plans. Please try again."))
-      .finally(() => setPlansLoading(false));
-  }, [network]);
+  // Reset plan when network changes
+  useEffect(() => { setPlan(null); }, [network]);
+
+  const plans = allPlans[network.code] || [];
 
   const validate = () => {
     const e = {};
-    if (!phone || phone.length < 10) e.phone = "Enter a valid phone number";
-    if (!plan)    e.plan    = "Select a data plan";
-    if (!network) e.network = "Select a network";
+    if (!phone || phone.replace(/\D/g,"").length < 10) e.phone = "Enter a valid phone number";
+    if (!plan) e.plan = "Select a data plan";
     return e;
   };
 
   const handleBuy = () => {
     const e = validate();
     if (Object.keys(e).length) { setErrors(e); return; }
-    const cfg = getNetConfig(network.network);
     navigate("/data/confirm", {
       state: {
-        network: { ...cfg, id: network.id, network_id: network.id, name: network.network },
+        network: { id: network.id, network_id: network.id, name: network.network, bg: network.bg, color: network.color, text: network.text },
         phone,
         plan,
       }
@@ -185,55 +212,46 @@ export default function Data() {
 
           <div className="dt-section">
             <div className="dt-label">Select Network</div>
-            {netsLoading ? (
-              <div className="dt-plans-loading"><div className="dt-spinner"/></div>
-            ) : netsError ? (
-              <div className="dt-net-error">{netsError}</div>
-            ) : (
-              <div className="dt-networks">
-                {networks.map(n => {
-                  const cfg = getNetConfig(n.network);
-                  const isActive = network?.id === n.id;
-                  return (
-                    <div className="dt-net-item" key={n.id} onClick={() => setNetwork(n)}>
-                      <div className={`dt-net-logo${isActive ? " active" : ""}`} style={{background: cfg.bg}}>
-                        <span style={{fontSize: cfg.text.length > 3 ? 10 : 14, fontWeight:900, color:cfg.color}}>{cfg.text}</span>
-                        {isActive && <div className="dt-net-check"><CheckSmall /></div>}
-                      </div>
-                      <span className="dt-net-name">{n.network}</span>
+            <div className="dt-networks">
+              {NETWORKS.map(n => {
+                const isActive = network.id === n.id;
+                return (
+                  <div className="dt-net-item" key={n.id} onClick={() => setNetwork(n)}>
+                    <div className={`dt-net-logo${isActive ? " active" : ""}`} style={{background: n.bg}}>
+                      <span style={{fontSize: n.text.length > 3 ? 10 : 14, fontWeight:900, color:n.color}}>{n.text}</span>
+                      {isActive && <div className="dt-net-check"><CheckSmall /></div>}
                     </div>
-                  );
-                })}
-              </div>
-            )}
+                    <span className="dt-net-name">{n.network}</span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           <div className="dt-section">
             <div className="dt-label">Phone Number</div>
             <div className={`dt-input-wrap${errors.phone ? " error" : ""}`}>
               <span className="dt-input-icon"><PhoneIcon /></span>
-              <input className="dt-input" type="tel" inputMode="numeric" placeholder="Enter 10 or 11 digit phone number"
-                value={phone} onChange={e => { setPhone(e.target.value); setErrors(er => ({...er, phone:""})); }}/>
+              <input className="dt-input" type="tel" inputMode="numeric"
+                placeholder="Enter 10 or 11 digit phone number"
+                value={phone}
+                onChange={e => { setPhone(e.target.value); setErrors(er => ({...er, phone:""})); }}/>
             </div>
             {errors.phone && <div className="dt-error-msg">{errors.phone}</div>}
           </div>
 
           <div className="dt-section">
-            <div className="dt-label">Select Plan</div>
+            <div className="dt-label">Data Plan</div>
             {plansLoading ? (
               <div className="dt-plans-loading"><div className="dt-spinner"/></div>
-            ) : plansError ? (
-              <div className="dt-plans-empty">{plansError}</div>
-            ) : plans.length === 0 ? (
-              <div className="dt-plans-empty">Select a network to see plans</div>
             ) : (
               <div className="dt-plans-grid">
                 {plans.map(p => (
                   <div key={p.id} className={`dt-plan-card${plan?.id === p.id ? " active" : ""}`}
                     onClick={() => { setPlan(p); setErrors(e => ({...e, plan:""})); }}>
-                    <div className="dt-plan-size">{p.size || p.name}</div>
-                    <div className="dt-plan-validity">{p.validity || p.duration || ""}</div>
-                    <div className="dt-plan-price">₦{Number(p.price || p.amount || 0).toLocaleString()}</div>
+                    <div className="dt-plan-size">{p.size}</div>
+                    <div className="dt-plan-validity">{p.validity}</div>
+                    <div className="dt-plan-price">₦{Number(p.sellingPrice).toLocaleString()}</div>
                   </div>
                 ))}
               </div>
@@ -243,8 +261,8 @@ export default function Data() {
         </div>
 
         <div className="dt-bottom">
-          <button className="dt-buy-btn" onClick={handleBuy} disabled={netsLoading || !network || !plan}>
-            {plan ? `Buy ${plan.size || plan.name} for ₦${Number(plan.price || plan.amount || 0).toLocaleString()}` : "Buy Data"}
+          <button className="dt-buy-btn" onClick={handleBuy} disabled={plansLoading || !plan}>
+            {plan ? `Buy ${plan.size} for ₦${Number(plan.sellingPrice).toLocaleString()}` : "Continue"}
           </button>
         </div>
 
