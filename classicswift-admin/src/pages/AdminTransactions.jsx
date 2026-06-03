@@ -138,11 +138,11 @@ function ManualCreditTool({ users }) {
       const userSnap = await getDoc(userRef);
       if (!userSnap.exists()) { setResult({ type: "err", msg: "User not found in Firebase" }); setCrediting(false); return; }
 
-      const currentBalance = userSnap.data().walletBalance || 0;
+      const currentBalance = userSnap.data().balance || userSnap.data().walletBalance || 0;
       const creditAmount   = Number(verified.amount);
       const newBalance     = currentBalance + creditAmount;
 
-      await updateDoc(userRef, { walletBalance: newBalance });
+      await updateDoc(userRef, { balance: newBalance, walletBalance: newBalance });
 
       await addDoc(collection(db, "transactions"), {
         userId:    userId,
