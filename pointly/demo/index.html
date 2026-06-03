@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Buy data, airtime, social accounts, SMS numbers & more on Pointly" />
+    <meta name="theme-color" content="#FEDD00" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <title>Pointly Market Place</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- PWA cache-bust: runs synchronously before the app loads -->
+    <script>
+      (function () {
+        var RESET_KEY = 'pwa-reset-v5';
+
+        if (!localStorage.getItem(RESET_KEY)) {
+          // Mark done first to prevent reload loop
+          localStorage.setItem(RESET_KEY, '1');
+
+          var done = function () { window.location.reload(true); };
+
+          // Unregister all service workers then clear all caches, then reload
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function (regs) {
+              var unregs = regs.map(function (r) { return r.unregister(); });
+              return Promise.all(unregs);
+            }).then(function () {
+              if ('caches' in window) {
+                return caches.keys().then(function (keys) {
+                  return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+                });
+              }
+            }).then(done).catch(done);
+          } else if ('caches' in window) {
+            caches.keys().then(function (keys) {
+              return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+            }).then(done).catch(done);
+          } else {
+            done();
+          }
+
+          // Stop loading old content while we wait for reload
+          document.write('');
+          return;
+        }
+
+        // Already reset — wire up auto-update for future SW updates
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.ready.then(function (reg) {
+            if (reg.waiting) {
+              reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+            }
+          });
+          navigator.serviceWorker.addEventListener('controllerchange', function () {
+            window.location.reload();
+          });
+        }
+      })();
+    </script>
+
+    <script type="module" crossorigin src="/demo/assets/index-BjspygIQ-v2.js"></script>
+    <link rel="stylesheet" crossorigin href="/demo/assets/index-hft0bi76.css">
+    <link rel="manifest" href="/demo/manifest.webmanifest">
+    <script id="vite-plugin-pwa:register-sw" src="/demo/registerSW.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <div id="api-access-btn" style="display:none;position:fixed;bottom:88px;left:14px;z-index:2147483647;pointer-events:auto;">
+      <a href="/developer.php" style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:56px;height:56px;border-radius:50%;background:#f5c100;color:#1a0820;text-decoration:none;box-shadow:0 4px 24px rgba(245,193,0,0.5);-webkit-tap-highlight-color:transparent;">
+        <span style="font-size:1.3rem;line-height:1;">🔑</span>
+        <span style="font-size:0.55rem;font-weight:800;font-family:'Inter',sans-serif;letter-spacing:.04em;margin-top:2px;">API</span>
+      </a>
+    </div>
+    <script>
+      var hiddenRoutes = ['/', '/login', '/register', '/forgot-password', '/reset-password', '/verify'];
+      function checkRoute() {
+        var path = window.location.pathname.replace('/demo', '') || '/';
+        var btn = document.getElementById('api-access-btn');
+        if (!btn) return;
+        btn.style.display = hiddenRoutes.indexOf(path) !== -1 ? 'none' : 'block';
+      }
+      checkRoute();
+      window.addEventListener('popstate', checkRoute);
+      window.addEventListener('hashchange', checkRoute);
+    </script>
+  </body>
+</html>
