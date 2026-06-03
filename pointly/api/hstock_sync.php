@@ -1,13 +1,13 @@
 <?php
 // ============================================================
-// POINTLY — hstockplus Product Sync
+// POINTLY — hstockplus Product Sync (category-by-category)
 // File: /public_html/api/hstock_sync.php
 // ============================================================
 
 declare(strict_types=1);
 
-set_time_limit(600); // 10 minutes — enough for 30 pages with rate-limit delays
-ini_set('max_execution_time', '600');
+set_time_limit(1800); // 30 minutes — category-by-category can take longer
+ini_set('max_execution_time', '1800');
 
 define('HSTOCK_API_URL',  'https://hstockplus.com/api/v2');
 define('HSTOCK_API_KEY',  'd1c62fa32aecd46014aba56a0bdc39f5');
@@ -15,6 +15,8 @@ define('SYNC_TOKEN',      'pL9mK2xQ7nR4wB8vT3');
 define('PRICE_MARKUP',    1.20);
 define('NAIRA_RATE',      1600);
 define('DEFAULT_ICON',    'fas fa-store');
+define('PER_PAGE',        200);
+define('MAX_PAGES_PER_CAT', 50); // up to 10 000 per category
 
 header('Content-Type: application/json');
 
@@ -26,6 +28,8 @@ if (!hash_equals(SYNC_TOKEN, $token)) {
 }
 
 require_once __DIR__ . '/config.php';
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
 function hstock_call(array $params): array
 {
@@ -47,15 +51,69 @@ function hstock_call(array $params): array
     $error    = curl_error($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
-    if ($error)        return ['error' => 'cURL error: ' . $error];
-    if ($httpCode !== 200) return ['error' => 'HTTP ' . $httpCode . ': ' . $response];
+    if ($error)             return ['error' => 'cURL error: ' . $error];
+    if ($httpCode !== 200)  return ['error' => 'HTTP ' . $httpCode . ': ' . $response];
     $decoded = json_decode($response, true);
     if (json_last_error() !== JSON_ERROR_NONE) return ['error' => 'Invalid JSON: ' . $response];
     return $decoded ?? [];
 }
 
+/**
+ * Fetch all products for one category, paginating until exhausted.
+ */
+function fetchCategory(string $categoryName): array
+{
+    $items   = [];
+    $seenIds = [];
+
+    for ($page = 1; $page <= MAX_PAGES_PER_CAT; $page++) {
+        if ($page > 1) sleep(2);
+
+        $res = hstock_call([
+            'action'     => 'services',
+            'entityType' => 'product',
+            'category'   => $categoryName,
+            'limit'      => PER_PAGE,
+            'page'       => $page,
+        ]);
+
+        // Rate-limit retry
+        if (isset($res['error'])) {
+            if (stripos($res['error'], 'rate') !== false || stripos($res['error'], 'limit') !== false) {
+                sleep(8);
+                $res = hstock_call([
+                    'action'     => 'services',
+                    'entityType' => 'product',
+                    'category'   => $categoryName,
+                    'limit'      => PER_PAGE,
+                    'page'       => $page,
+                ]);
+            }
+            if (isset($res['error'])) break;
+        }
+
+        $fetched = $res['services'] ?? $res['products'] ?? $res['data'] ?? [];
+        if (empty($fetched)) break;
+
+        foreach ($fetched as $p) {
+            $pid = (string) ($p['id'] ?? '');
+            if ($pid !== '' && !isset($seenIds[$pid])) {
+                $seenIds[$pid] = true;
+                $items[]       = $p;
+            }
+        }
+
+        if (count($fetched) < PER_PAGE) break; // last page for this category
+    }
+
+    return $items;
+}
+
 function getOrCreateCategory(mysqli $conn, string $categoryName): int
 {
+    static $cache = [];
+    if (isset($cache[$categoryName])) return $cache[$categoryName];
+
     $iconMap = [
         'instagram' => 'fab fa-instagram',
         'facebook'  => 'fab fa-facebook',
@@ -81,6 +139,15 @@ function getOrCreateCategory(mysqli $conn, string $categoryName): int
         'sms'       => 'fas fa-sms',
         'accounts'  => 'fas fa-user-circle',
         'gaming'    => 'fas fa-gamepad',
+        'threads'   => 'fab fa-instagram',
+        'vkontakte' => 'fab fa-vk',
+        'vk'        => 'fab fa-vk',
+        'dating'    => 'fas fa-heart',
+        'netflix'   => 'fas fa-film',
+        'amazon'    => 'fab fa-amazon',
+        'microsoft' => 'fab fa-microsoft',
+        'github'    => 'fab fa-github',
+        'paypal'    => 'fab fa-paypal',
     ];
 
     $colorMap = [
@@ -100,6 +167,15 @@ function getOrCreateCategory(mysqli $conn, string $categoryName): int
         'kick'      => '#53FC18',
         'apple'     => '#555555',
         'pinterest' => '#E60023',
+        'threads'   => '#000000',
+        'vkontakte' => '#4680C2',
+        'vk'        => '#4680C2',
+        'dating'    => '#FF6B6B',
+        'netflix'   => '#E50914',
+        'amazon'    => '#FF9900',
+        'microsoft' => '#00A4EF',
+        'github'    => '#24292E',
+        'paypal'    => '#003087',
         'default'   => '#6C757D',
     ];
 
@@ -114,7 +190,7 @@ function getOrCreateCategory(mysqli $conn, string $categoryName): int
     $check->execute();
     $existing = $check->get_result()->fetch_assoc();
     $check->close();
-    if ($existing) return (int) $existing['id'];
+    if ($existing) { $cache[$categoryName] = (int)$existing['id']; return $cache[$categoryName]; }
 
     $checkName = $conn->prepare("SELECT id FROM social_categories WHERE name = ? LIMIT 1");
     $checkName->bind_param('s', $categoryName);
@@ -126,7 +202,8 @@ function getOrCreateCategory(mysqli $conn, string $categoryName): int
         $upd->bind_param('si', $categoryName, $existingName['id']);
         $upd->execute();
         $upd->close();
-        return (int) $existingName['id'];
+        $cache[$categoryName] = (int)$existingName['id'];
+        return $cache[$categoryName];
     }
 
     $ins = $conn->prepare("INSERT INTO social_categories (name, icon, color, source, hstock_category) VALUES (?, ?, ?, 'hstockplus', ?)");
@@ -134,232 +211,206 @@ function getOrCreateCategory(mysqli $conn, string $categoryName): int
     $ins->execute();
     $newId = $conn->insert_id;
     $ins->close();
-    return (int) $newId;
+    $cache[$categoryName] = (int)$newId;
+    return $cache[$categoryName];
 }
 
-// ── True SMM services to block (bulk engagement, not accounts) ──────────────
 function isSmmService(string $categoryName, string $name): bool
 {
     $haystack = strtolower($categoryName . ' ' . $name);
-
     $smmPatterns = [
         'followers', 'likes', 'views', 'subscribers', 'comments',
         'retweets', 'impressions', 'reactions', 'shares', 'plays',
         'streams', 'reposts', 'saves', 'story views', 'reel views',
         'smm', 'growth service', 'boost service',
     ];
-
     foreach ($smmPatterns as $pattern) {
-        // Only match as standalone word/phrase, not substring of "account"
-        if (preg_match('/\b' . preg_quote($pattern, '/') . '\b/i', $haystack)) {
-            return true;
-        }
+        if (preg_match('/\b' . preg_quote($pattern, '/') . '\b/i', $haystack)) return true;
     }
     return false;
 }
 
+function processItem(mysqli $conn, array $item, array &$stats): void
+{
+    $hstock_id     = (string) ($item['id']          ?? '');
+    $service_num   = (string) ($item['service']     ?? '');
+    $name          = trim((string) ($item['name']   ?? ''));
+    $description   = strip_tags((string) ($item['description'] ?? ''));
+    $description   = html_entity_decode($description, ENT_QUOTES, 'UTF-8');
+    $description   = trim(preg_replace('/\s+/', ' ', $description));
+    $category_name = trim((string) ($item['category'] ?? 'General'));
+    $image_url     = (string) ($item['imageUrl'] ?? $item['image'] ?? $item['image_url'] ?? $item['img'] ?? '');
+    $rate          = (float)  ($item['rate'] ?? 0);
+
+    if ($hstock_id === '' || $rate <= 0 || $name === '') {
+        $stats['products_skipped']++;
+        return;
+    }
+    if (isSmmService($category_name, $name)) {
+        $stats['products_skipped']++;
+        return;
+    }
+
+    $price_per_unit_usd = $rate / 1000;
+    $original_price     = round($price_per_unit_usd * NAIRA_RATE, 2);
+    $price              = round($original_price * PRICE_MARKUP, 2);
+    $original_price     = max(0.01, min(99999.00, $original_price));
+    $price              = max(0.01, min(99999.00, $price));
+
+    $category_id = getOrCreateCategory($conn, $category_name);
+    $tags        = strtolower($category_name);
+
+    $exists = $conn->prepare("SELECT id FROM social_accounts WHERE hstock_id = ? LIMIT 1");
+    $exists->bind_param('s', $hstock_id);
+    $exists->execute();
+    $existing = $exists->get_result()->fetch_assoc();
+    $exists->close();
+
+    if ($existing) {
+        $checkPrice = $conn->prepare("SELECT price, original_price FROM social_accounts WHERE hstock_id = ? LIMIT 1");
+        $checkPrice->bind_param('s', $hstock_id);
+        $checkPrice->execute();
+        $priceRow = $checkPrice->get_result()->fetch_assoc();
+        $checkPrice->close();
+
+        $currentPrice   = (float) ($priceRow['price']          ?? 0);
+        $storedOriginal = (float) ($priceRow['original_price'] ?? 0);
+        $expectedPrice  = round($storedOriginal * PRICE_MARKUP, 2);
+        $adminModified  = $storedOriginal > 0 && abs($currentPrice - $expectedPrice) > 1.00;
+
+        if ($adminModified) {
+            $upd = $conn->prepare("
+                UPDATE social_accounts
+                SET title=?, description=?, original_price=?, category_id=?, image=?, tags=?,
+                    hstock_service_num=?, source='hstockplus', status='available'
+                WHERE hstock_id=? AND source='hstockplus'
+            ");
+            $upd->bind_param('ssdiisss', $name, $description, $original_price, $category_id, $image_url, $tags, $service_num, $hstock_id);
+        } else {
+            $upd = $conn->prepare("
+                UPDATE social_accounts
+                SET title=?, description=?, price=?, original_price=?, category_id=?, image=?, tags=?,
+                    hstock_service_num=?, source='hstockplus', status='available'
+                WHERE hstock_id=? AND source='hstockplus'
+            ");
+            $upd->bind_param('ssddiisss', $name, $description, $price, $original_price, $category_id, $image_url, $tags, $service_num, $hstock_id);
+        }
+        $upd->execute();
+        $upd->close();
+        $stats['products_updated']++;
+    } else {
+        $ins = $conn->prepare("
+            INSERT INTO social_accounts
+                (title, description, price, original_price, category_id, image, tags,
+                 status, source, hstock_id, hstock_service_num)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'available', 'hstockplus', ?, ?)
+        ");
+        $ins->bind_param('ssddissss', $name, $description, $price, $original_price, $category_id, $image_url, $tags, $hstock_id, $service_num);
+        $ins->execute();
+        $ins->close();
+        $stats['products_inserted']++;
+    }
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+
 $stats = [
-    'verified_shops_found' => 0,
-    'products_fetched'     => 0,
-    'products_inserted'    => 0,
-    'products_updated'     => 0,
-    'products_skipped'     => 0,
-    'categories_created'   => 0,
-    'errors'               => [],
+    'categories_found'  => 0,
+    'products_fetched'  => 0,
+    'products_inserted' => 0,
+    'products_updated'  => 0,
+    'products_skipped'  => 0,
+    'per_category'      => [],
+    'errors'            => [],
 ];
 
-// ── Step 1: Fetch all products paginated (primary strategy) ──────────────────
-$items   = [];
-$seenIds = [];
-$perPage = 200;
+// ── Step 1: Fetch all available categories from hstock ───────────────────────
+$catResponse      = hstock_call(['action' => 'categories', 'entityType' => 'product']);
+$hstockCategories = [];
 
-for ($page = 1; $page <= 30; $page++) {
-    if ($page > 1) sleep(2); // respect rate limit between pages
-
-    $pageResponse = hstock_call([
-        'action'     => 'services',
-        'entityType' => 'product',
-        'limit'      => $perPage,
-        'page'       => $page,
-    ]);
-
-    if (isset($pageResponse['error'])) {
-        $stats['errors'][] = 'Page ' . $page . ': ' . $pageResponse['error'];
-        // On rate limit, wait longer and retry once
-        if (stripos($pageResponse['error'], 'rate') !== false || stripos($pageResponse['error'], 'limit') !== false) {
-            sleep(5);
-            $retry = hstock_call([
-                'action'     => 'services',
-                'entityType' => 'product',
-                'limit'      => $perPage,
-                'page'       => $page,
-            ]);
-            if (isset($retry['error'])) break; // give up on this page
-            $pageResponse = $retry;
-            array_pop($stats['errors']); // remove the error since retry worked
-        } else {
-            break;
+if (!isset($catResponse['error'])) {
+    $rawCats = $catResponse['categories'] ?? $catResponse['data'] ?? $catResponse ?? [];
+    foreach ($rawCats as $cat) {
+        if (is_string($cat) && $cat !== '') {
+            $hstockCategories[] = $cat;
+        } elseif (is_array($cat)) {
+            $n = $cat['name'] ?? $cat['category'] ?? $cat['title'] ?? '';
+            if ($n !== '') $hstockCategories[] = (string) $n;
         }
     }
-
-    $fetched = $pageResponse['services']
-            ?? $pageResponse['products']
-            ?? $pageResponse['data']
-            ?? [];
-
-    if (empty($fetched)) break;
-
-    foreach ($fetched as $p) {
-        $pid = (string) ($p['id'] ?? '');
-        if ($pid !== '' && !isset($seenIds[$pid])) {
-            $seenIds[$pid] = true;
-            $items[]       = $p;
-        }
-    }
-
-    if (count($fetched) < $perPage) break; // last page
-    if (count($items) >= 6000)      break; // hard ceiling
 }
 
-// ── Step 2: Supplement with verified-shop products ───────────────────────────
-$shopsResponse = hstock_call(['action' => 'shops']);
-$shops = [];
-if (!isset($shopsResponse['error'])) {
-    $shops = $shopsResponse['shops'] ?? $shopsResponse ?? [];
-}
+// ── Fallback: discover categories via general paginated fetch ────────────────
+if (empty($hstockCategories)) {
+    $stats['errors'][] = 'categories endpoint empty — discovering via general listing';
 
-$verifiedShopIds = [];
-foreach ($shops as $shop) {
-    $rating   = (float)  ($shop['rating']      ?? $shop['avg_rating']  ?? 0);
-    $sales    = (int)    ($shop['total_sales']  ?? $shop['sales']       ?? 0);
-    $verified = (bool)   ($shop['verified']     ?? $shop['is_verified'] ?? false);
-    $shopId   = (string) ($shop['id']           ?? $shop['shop_id']     ?? '');
-    if (!empty($shopId) && ($verified || ($rating >= 4.5 && $sales >= 10))) {
-        $verifiedShopIds[] = $shopId;
-    }
-}
-$stats['verified_shops_found'] = count($verifiedShopIds);
+    $discoveredCats = [];
+    $globalSeen     = [];
 
-foreach ($verifiedShopIds as $shopId) {
-    if (count($items) >= 2000) break;
-
-    for ($sp = 1; $sp <= 5; $sp++) {
-        sleep(2); // rate limit
-        $shopResponse = hstock_call([
-            'action'     => 'services',
-            'entityType' => 'product',
-            'shopId'     => $shopId,
-            'limit'      => 100,
-            'page'       => $sp,
-        ]);
-        if (isset($shopResponse['error'])) break;
-
-        $fetched = $shopResponse['services'] ?? $shopResponse['products'] ?? [];
+    for ($page = 1; $page <= 30; $page++) {
+        if ($page > 1) sleep(2);
+        $res = hstock_call(['action' => 'services', 'entityType' => 'product', 'limit' => PER_PAGE, 'page' => $page]);
+        if (isset($res['error'])) { $stats['errors'][] = 'General page ' . $page . ': ' . $res['error']; break; }
+        $fetched = $res['services'] ?? $res['products'] ?? $res['data'] ?? [];
         if (empty($fetched)) break;
-
         foreach ($fetched as $p) {
             $pid = (string) ($p['id'] ?? '');
-            if ($pid !== '' && !isset($seenIds[$pid])) {
-                $seenIds[$pid]   = true;
-                $p['_shop_id']   = $shopId;
-                $items[]         = $p;
+            $cat = trim((string) ($p['category'] ?? ''));
+            if ($pid !== '' && !isset($globalSeen[$pid])) {
+                $globalSeen[$pid] = true;
+                if ($cat !== '') $discoveredCats[$cat] = true;
+                $stats['products_fetched']++;
+                try { processItem($conn, $p, $stats); } catch (Throwable $e) { $stats['errors'][] = $e->getMessage(); }
             }
         }
-        if (count($fetched) < 100)  break;
-        if (count($items)   >= 6000) break;
+        if (count($fetched) < PER_PAGE) break;
     }
+
+    // Drain each discovered category for remaining products
+    foreach (array_keys($discoveredCats) as $catName) {
+        sleep(1);
+        $catItems = fetchCategory($catName);
+        $catNew   = 0;
+        foreach ($catItems as $p) {
+            $pid = (string) ($p['id'] ?? '');
+            if ($pid !== '' && !isset($globalSeen[$pid])) {
+                $globalSeen[$pid] = true;
+                $stats['products_fetched']++;
+                $catNew++;
+                try { processItem($conn, $p, $stats); } catch (Throwable $e) { $stats['errors'][] = $e->getMessage(); }
+            }
+        }
+        $stats['per_category'][$catName] = $catNew;
+    }
+
+    $stats['categories_found'] = count($discoveredCats);
+    echo json_encode(['success' => true, 'message' => 'Sync complete (fallback mode).', 'stats' => $stats], JSON_PRETTY_PRINT);
+    exit;
 }
 
-$stats['products_fetched'] = count($items);
+// ── Step 2: Fetch every product in every category ────────────────────────────
+$stats['categories_found'] = count($hstockCategories);
+$globalSeen = [];
 
-// ── Step 3: Process each item ────────────────────────────────────────────────
-foreach ($items as $item) {
-    try {
-        $hstock_id     = (string) ($item['id']          ?? '');
-        $service_num   = (string) ($item['service']     ?? '');
-        $name          = trim((string) ($item['name']   ?? ''));
-        $description   = strip_tags((string) ($item['description'] ?? ''));
-        $description   = html_entity_decode($description, ENT_QUOTES, 'UTF-8');
-        $description   = trim(preg_replace('/\s+/', ' ', $description));
-        $category_name = trim((string) ($item['category'] ?? 'General'));
-        $image_url     = (string) ($item['imageUrl']  ?? $item['image']     ?? $item['image_url'] ?? $item['img'] ?? '');
-        $rate          = (float)  ($item['rate']       ?? 0);
+foreach ($hstockCategories as $catName) {
+    sleep(1);
+    $catItems = fetchCategory($catName);
+    $catNew   = 0;
 
-        // Skip only truly invalid items
-        if ($hstock_id === '' || $rate <= 0 || $name === '') {
-            $stats['products_skipped']++;
-            continue;
+    foreach ($catItems as $p) {
+        $pid = (string) ($p['id'] ?? '');
+        if ($pid === '' || isset($globalSeen[$pid])) continue;
+        $globalSeen[$pid] = true;
+        $stats['products_fetched']++;
+        $catNew++;
+        try {
+            processItem($conn, $p, $stats);
+        } catch (Throwable $e) {
+            $stats['errors'][] = 'Cat=' . $catName . ' id=' . ($p['id'] ?? '?') . ': ' . $e->getMessage();
         }
-
-        // Skip pure SMM bulk-engagement services (not accounts)
-        if (isSmmService($category_name, $name)) {
-            $stats['products_skipped']++;
-            continue;
-        }
-
-        $price_per_unit_usd = $rate / 1000;
-        $original_price     = round($price_per_unit_usd * NAIRA_RATE, 2);
-        $price              = round($original_price * PRICE_MARKUP, 2);
-        $original_price     = max(0.01, min(99999.00, $original_price));
-        $price              = max(0.01, min(99999.00, $price));
-
-        $category_id = getOrCreateCategory($conn, $category_name);
-        $tags        = strtolower($category_name);
-
-        $exists = $conn->prepare("SELECT id FROM social_accounts WHERE hstock_id = ? LIMIT 1");
-        $exists->bind_param('s', $hstock_id);
-        $exists->execute();
-        $existing = $exists->get_result()->fetch_assoc();
-        $exists->close();
-
-        if ($existing) {
-            $checkPrice = $conn->prepare("SELECT price, original_price FROM social_accounts WHERE hstock_id = ? LIMIT 1");
-            $checkPrice->bind_param('s', $hstock_id);
-            $checkPrice->execute();
-            $priceRow = $checkPrice->get_result()->fetch_assoc();
-            $checkPrice->close();
-
-            $currentPrice   = (float) ($priceRow['price']          ?? 0);
-            $storedOriginal = (float) ($priceRow['original_price'] ?? 0);
-            $expectedPrice  = round($storedOriginal * PRICE_MARKUP, 2);
-            $adminModified  = $storedOriginal > 0 && abs($currentPrice - $expectedPrice) > 1.00;
-
-            if ($adminModified) {
-                $upd = $conn->prepare("
-                    UPDATE social_accounts
-                    SET title=?, description=?, original_price=?, category_id=?, image=?, tags=?,
-                        hstock_service_num=?, source='hstockplus', status='available'
-                    WHERE hstock_id=? AND source='hstockplus'
-                ");
-                $upd->bind_param('ssdiisss', $name, $description, $original_price, $category_id, $image_url, $tags, $service_num, $hstock_id);
-            } else {
-                $upd = $conn->prepare("
-                    UPDATE social_accounts
-                    SET title=?, description=?, price=?, original_price=?, category_id=?, image=?, tags=?,
-                        hstock_service_num=?, source='hstockplus', status='available'
-                    WHERE hstock_id=? AND source='hstockplus'
-                ");
-                $upd->bind_param('ssddiisss', $name, $description, $price, $original_price, $category_id, $image_url, $tags, $service_num, $hstock_id);
-            }
-            $upd->execute();
-            $upd->close();
-            $stats['products_updated']++;
-        } else {
-            $ins = $conn->prepare("
-                INSERT INTO social_accounts
-                    (title, description, price, original_price, category_id, image, tags,
-                     status, source, hstock_id, hstock_service_num)
-                VALUES (?, ?, ?, ?, ?, ?, ?, 'available', 'hstockplus', ?, ?)
-            ");
-            $ins->bind_param('ssddissss', $name, $description, $price, $original_price, $category_id, $image_url, $tags, $hstock_id, $service_num);
-            $ins->execute();
-            $ins->close();
-            $stats['products_inserted']++;
-        }
-
-    } catch (Throwable $e) {
-        $stats['errors'][] = 'Item ' . ($item['id'] ?? '?') . ': ' . $e->getMessage();
     }
+
+    $stats['per_category'][$catName] = $catNew;
 }
 
 echo json_encode([
