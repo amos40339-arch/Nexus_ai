@@ -15,6 +15,11 @@ export const getBalance = async (uid) => {
   }
 };
 
+// Alias used by AirtimeConfirm, DataConfirm pages
+export const deductWallet = async (uid, amount) => {
+  return deductBalance(uid, amount);
+};
+
 export const deductBalance = async (uid, amount) => {
   try {
     const snap = await getDoc(doc(db, "users", uid));

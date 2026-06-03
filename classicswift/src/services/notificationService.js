@@ -51,6 +51,29 @@ export const markAllRead = async (uid) => {
   }
 };
 
+export const sendWelcomeNotification = async (uid, name) => {
+  return createNotification(
+    uid,
+    "Welcome to ClassicSwift! 🎉",
+    `Hi ${name || "there"}, your account is ready. Fund your wallet to get started.`,
+    "info"
+  );
+};
+
+export const sendTransactionNotification = async (uid, type, amount, network, status) => {
+  const success = status === "success";
+  const label   = type === "airtime" ? "Airtime" : type === "data" ? "Data" : "Transaction";
+  const net     = network ? `${network} ` : "";
+  return createNotification(
+    uid,
+    success ? `${net}${label} Successful ✅` : `${net}${label} Failed ❌`,
+    success
+      ? `Your ${net}${label.toLowerCase()} purchase of ₦${Number(amount).toLocaleString()} was successful.`
+      : `Your ${net}${label.toLowerCase()} purchase of ₦${Number(amount).toLocaleString()} failed. Please try again.`,
+    success ? "success" : "error"
+  );
+};
+
 export const createNotification = async (uid, title, body, type = "info") => {
   try {
     await addDoc(collection(db, "notifications"), {
