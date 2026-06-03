@@ -352,27 +352,91 @@ if ($singleCategory !== '') {
 }
 
 // ── List-categories mode: ?token=...&list_categories=1 ───────────────────────
-// Returns all hstock categories so you know what to pass as &category=
+// Returns parsed subcategory list — what will actually be synced
 if (!empty($_GET['list_categories'])) {
     $catResponse = hstock_call(['action' => 'categories', 'entityType' => 'product']);
-    echo json_encode(['success' => true, 'response' => $catResponse], JSON_PRETTY_PRINT);
+    $parsed = []; $blocked = [];
+    $rawCats = $catResponse['categories'] ?? $catResponse['data'] ?? $catResponse ?? [];
+    foreach ($rawCats as $group) {
+        if (!is_array($group)) continue;
+        $parentName = (string) ($group['category'] ?? $group['name'] ?? '');
+        if ($parentName !== '' && isBlockedParentCat($parentName)) {
+            $blocked[] = $parentName; continue;
+        }
+        $subs = $group['subcategories'] ?? $group['sub_categories'] ?? [];
+        if (!empty($subs) && is_array($subs)) {
+            foreach ($subs as $sub) {
+                $n = is_string($sub) ? $sub : ($sub['name'] ?? '');
+                if ($n !== '') $parsed[] = $n;
+            }
+        } elseif ($parentName !== '') { $parsed[] = $parentName; }
+    }
+    echo json_encode([
+        'success'            => true,
+        'total_to_sync'      => count(array_unique($parsed)),
+        'categories_to_sync' => array_values(array_unique($parsed)),
+        'blocked_parents'    => $blocked,
+        'raw_response'       => $catResponse,
+    ], JSON_PRETTY_PRINT);
     exit;
 }
 
+// ── Parent categories to skip entirely (SMM / ad tools, not accounts) ────────
+$BLOCKED_PARENT_CATS = [
+    'ad & marketing',
+    'smm',
+    'followers',
+    'likes',
+    'views',
+    'boost',
+    'growth',
+    'promotion',
+    'traffic',
+];
+
+function isBlockedParentCat(string $catName): bool {
+    global $BLOCKED_PARENT_CATS;
+    $lower = strtolower($catName);
+    foreach ($BLOCKED_PARENT_CATS as $blocked) {
+        if (str_contains($lower, $blocked)) return true;
+    }
+    return false;
+}
+
 // ── Step 1: Fetch all available categories from hstock ───────────────────────
+// hstock returns: {"categories":[{"category":"Accounts","subcategories":["Instagram","Facebook",...]},...]}}
+// We need to extract the SUBCATEGORY names — those are what we pass as &category= when fetching products.
 $catResponse      = hstock_call(['action' => 'categories', 'entityType' => 'product']);
 $hstockCategories = [];
 
 if (!isset($catResponse['error'])) {
     $rawCats = $catResponse['categories'] ?? $catResponse['data'] ?? $catResponse ?? [];
-    foreach ($rawCats as $cat) {
-        if (is_string($cat) && $cat !== '') {
-            $hstockCategories[] = $cat;
-        } elseif (is_array($cat)) {
-            $n = $cat['name'] ?? $cat['category'] ?? $cat['title'] ?? '';
-            if ($n !== '') $hstockCategories[] = (string) $n;
+    foreach ($rawCats as $group) {
+        if (!is_array($group)) continue;
+
+        $parentName = (string) ($group['category'] ?? $group['name'] ?? '');
+
+        // Skip entire SMM / ad-tool parent categories
+        if ($parentName !== '' && isBlockedParentCat($parentName)) continue;
+
+        // Subcategories are the actual fetch targets (e.g. "Instagram", "Gmail")
+        $subs = $group['subcategories'] ?? $group['sub_categories'] ?? [];
+        if (!empty($subs) && is_array($subs)) {
+            foreach ($subs as $sub) {
+                if (is_string($sub) && $sub !== '') {
+                    $hstockCategories[] = $sub;
+                } elseif (is_array($sub)) {
+                    $n = $sub['name'] ?? $sub['category'] ?? '';
+                    if ($n !== '') $hstockCategories[] = (string) $n;
+                }
+            }
+        } elseif ($parentName !== '') {
+            // No subcategories — use the parent name itself
+            $hstockCategories[] = $parentName;
         }
     }
+    // Deduplicate
+    $hstockCategories = array_values(array_unique($hstockCategories));
 }
 
 // ── Fallback: discover categories via general paginated fetch ────────────────
