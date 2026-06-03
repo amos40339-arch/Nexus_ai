@@ -15,6 +15,11 @@ $catRes = $conn->query("
     LEFT JOIN social_accounts sa ON sa.category_id = sc.id
     WHERE sc.name NOT LIKE '%Growth Services%'
       AND sc.name NOT LIKE '%growth services%'
+      AND sc.name NOT LIKE '%Digital Products%'
+      AND sc.name NOT LIKE '%digital products%'
+      AND sc.name NOT LIKE '%SMM%'
+      AND sc.name NOT LIKE '%Video Bundle%'
+      AND sc.name NOT LIKE '%video bundle%'
     GROUP BY sc.id
     HAVING total_stock > 0
     ORDER BY sc.name ASC
