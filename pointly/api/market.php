@@ -159,9 +159,6 @@ try {
         ";
         $sResult = $conn->query($socialQuery);
     }
-    // Dummy query placeholder to keep code flow intact
-    $socialQuery = "";
-    $sResult = $conn->query($socialQuery);
     if ($sResult) {
         while ($row = $sResult->fetch_assoc()) {
             $row['price']       = (float) $row['price'];
