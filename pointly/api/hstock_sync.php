@@ -224,9 +224,10 @@ function isSmmService(string $categoryName, string $name): bool
 {
     $haystack = strtolower($categoryName . ' ' . $name);
     $smmPatterns = [
-        'followers', 'likes', 'story views', 'reel views',
-        'retweets', 'impressions', 'reposts',
-        'smm panel', 'growth service', 'boost service',
+        'followers', 'likes', 'views', 'subscribers', 'comments',
+        'retweets', 'impressions', 'reactions', 'shares', 'plays',
+        'streams', 'reposts', 'saves', 'story views', 'reel views',
+        'smm', 'growth service', 'boost service',
     ];
     foreach ($smmPatterns as $pattern) {
         if (preg_match('/\b' . preg_quote($pattern, '/') . '\b/i', $haystack)) return true;
