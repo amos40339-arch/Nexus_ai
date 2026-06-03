@@ -1,17 +1,14 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import Layout from "../components/Layout";
-
-const POINTLY_API_BASE = "https://www.pointly.com.ng/api/v2";
-const POINTLY_API_KEY  = "24c5fdb22b9a94a3f50c95dd4fa59c28a8ed79384ec78b7df933e192ee1b767e";
 
 const STYLES = `
   @keyframes fadeInUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
   @keyframes spin { to{transform:rotate(360deg)} }
   @keyframes toastIn { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
 
-  .ap-tabs { display:flex; gap:8px; margin-bottom:20px; animation:fadeInUp .4s ease both; flex-wrap:wrap; }
+  .ap-tabs { display:flex; gap:8px; margin-bottom:20px; animation:fadeInUp .4s ease both; }
   .ap-tab { height:40px; border-radius:10px; border:1px solid #2A2D3A; background:#1A1D27; font-family:'Poppins',sans-serif; font-size:13.5px; font-weight:600; color:#9ca3af; cursor:pointer; padding:0 20px; transition:all .2s; }
   .ap-tab.active { background:#6A00DF; border-color:#6A00DF; color:#fff; }
 
@@ -23,12 +20,6 @@ const STYLES = `
   .ap-network-badge { width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:900; color:#fff; flex-shrink:0; }
   .ap-network-name { font-size:16px; font-weight:800; color:#fff; }
 
-  .ap-sync-bar { display:flex; align-items:center; gap:10px; margin-bottom:16px; padding:12px 14px; background:#1A1D27; border:1px solid #2A2D3A; border-radius:12px; }
-  .ap-sync-info { flex:1; font-size:13px; color:#6b7280; }
-  .ap-sync-btn { height:36px; background:#6A00DF; border:none; border-radius:9px; font-family:'Poppins',sans-serif; font-size:13px; font-weight:700; color:#fff; cursor:pointer; padding:0 16px; display:flex; align-items:center; gap:7px; flex-shrink:0; transition:opacity .2s; }
-  .ap-sync-btn:disabled { opacity:.5; cursor:not-allowed; }
-  .ap-sync-spinner { width:13px; height:13px; border:2px solid rgba(255,255,255,.3); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; }
-
   .ap-plans-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:10px; }
   .ap-plan-card { background:#1A1D27; border:1px solid #2A2D3A; border-radius:14px; padding:14px; transition:border-color .2s; }
   .ap-plan-card:hover { border-color:#6A00DF; }
@@ -38,10 +29,9 @@ const STYLES = `
   .ap-plan-label { font-size:10.5px; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px; }
   .ap-plan-input { width:100%; height:36px; background:#0F1117; border:1px solid #2A2D3A; border-radius:9px; padding:0 10px; font-family:'Poppins',sans-serif; font-size:13.5px; font-weight:600; color:#fff; outline:none; transition:border-color .2s; }
   .ap-plan-input:focus { border-color:#6A00DF; }
+  .ap-plan-input.ro { color:#6b7280; cursor:not-allowed; }
   .ap-plan-margin { font-size:11px; color:#10B881; font-weight:600; margin-top:5px; }
   .ap-plan-margin.neg { color:#EF4444; }
-
-  .ap-empty { text-align:center; padding:40px 20px; color:#6b7280; font-size:13px; }
 
   .ap-airtime-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; animation:fadeInUp .4s .04s ease both; }
   .ap-airtime-card { background:#1A1D27; border:1px solid #2A2D3A; border-radius:14px; padding:16px; }
@@ -58,12 +48,13 @@ const STYLES = `
   .ap-spinner { width:16px; height:16px; border:2px solid rgba(255,255,255,.3); border-top-color:#fff; border-radius:50%; animation:spin .7s linear infinite; }
 
   .ap-toast { position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:#1A1D27; border:1px solid #10B881; border-radius:14px; padding:12px 20px; display:flex; align-items:center; gap:10px; z-index:300; box-shadow:0 8px 24px rgba(0,0,0,.4); animation:toastIn .3s ease both; white-space:nowrap; }
+  .ap-toast.err { border-color:#EF4444; }
   .ap-toast-icon { width:26px; height:26px; border-radius:50%; background:#10B881; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .ap-toast.err .ap-toast-icon { background:#EF4444; }
   .ap-toast-text { font-size:14px; font-weight:600; color:#fff; }
 
   .ap-loading { display:flex; justify-content:center; padding:60px 0; }
   .ap-load-spinner { width:28px; height:28px; border:3px solid #2A2D3A; border-top-color:#6A00DF; border-radius:50%; animation:spin .7s linear infinite; }
-
   .ap-plan-count { font-size:12px; color:#6b7280; margin-bottom:14px; }
 `;
 
@@ -74,7 +65,53 @@ const NETWORKS = [
   { name:"9mobile", code:"9MB", color:"#6A00DF" },
 ];
 
-const NET_NAME_MAP = { MTN:"MTN", AIR:"Airtel", GLO:"Glo", "9MB":"9mobile" };
+const DEFAULT_DATA_PLANS = {
+  MTN: [
+    { id:"mtn-50mb",   size:"50MB",  validity:"1 Day",    cost:50,   sellingPrice:60   },
+    { id:"mtn-100mb",  size:"100MB", validity:"1 Day",    cost:95,   sellingPrice:110  },
+    { id:"mtn-200mb",  size:"200MB", validity:"3 Days",   cost:160,  sellingPrice:185  },
+    { id:"mtn-500mb",  size:"500MB", validity:"7 Days",   cost:280,  sellingPrice:320  },
+    { id:"mtn-1gb",    size:"1GB",   validity:"30 Days",  cost:270,  sellingPrice:310  },
+    { id:"mtn-2gb",    size:"2GB",   validity:"30 Days",  cost:480,  sellingPrice:550  },
+    { id:"mtn-3gb",    size:"3GB",   validity:"30 Days",  cost:700,  sellingPrice:800  },
+    { id:"mtn-5gb",    size:"5GB",   validity:"30 Days",  cost:1150, sellingPrice:1300 },
+    { id:"mtn-10gb",   size:"10GB",  validity:"30 Days",  cost:2200, sellingPrice:2500 },
+    { id:"mtn-20gb",   size:"20GB",  validity:"30 Days",  cost:3800, sellingPrice:4300 },
+  ],
+  AIR: [
+    { id:"air-100mb",  size:"100MB", validity:"1 Day",    cost:90,   sellingPrice:105  },
+    { id:"air-200mb",  size:"200MB", validity:"3 Days",   cost:150,  sellingPrice:175  },
+    { id:"air-500mb",  size:"500MB", validity:"7 Days",   cost:260,  sellingPrice:300  },
+    { id:"air-1gb",    size:"1GB",   validity:"30 Days",  cost:260,  sellingPrice:300  },
+    { id:"air-2gb",    size:"2GB",   validity:"30 Days",  cost:460,  sellingPrice:530  },
+    { id:"air-3gb",    size:"3GB",   validity:"30 Days",  cost:680,  sellingPrice:780  },
+    { id:"air-5gb",    size:"5GB",   validity:"30 Days",  cost:1100, sellingPrice:1250 },
+    { id:"air-10gb",   size:"10GB",  validity:"30 Days",  cost:2100, sellingPrice:2400 },
+    { id:"air-20gb",   size:"20GB",  validity:"30 Days",  cost:3500, sellingPrice:4000 },
+  ],
+  GLO: [
+    { id:"glo-100mb",  size:"100MB", validity:"1 Day",    cost:85,   sellingPrice:100  },
+    { id:"glo-200mb",  size:"200MB", validity:"3 Days",   cost:145,  sellingPrice:170  },
+    { id:"glo-500mb",  size:"500MB", validity:"7 Days",   cost:250,  sellingPrice:290  },
+    { id:"glo-1gb",    size:"1GB",   validity:"30 Days",  cost:250,  sellingPrice:290  },
+    { id:"glo-2gb",    size:"2GB",   validity:"30 Days",  cost:450,  sellingPrice:520  },
+    { id:"glo-3gb",    size:"3GB",   validity:"30 Days",  cost:650,  sellingPrice:750  },
+    { id:"glo-5gb",    size:"5GB",   validity:"30 Days",  cost:1050, sellingPrice:1200 },
+    { id:"glo-10gb",   size:"10GB",  validity:"30 Days",  cost:2000, sellingPrice:2300 },
+    { id:"glo-20gb",   size:"20GB",  validity:"30 Days",  cost:3300, sellingPrice:3800 },
+  ],
+  "9MB": [
+    { id:"9mb-100mb",  size:"100MB", validity:"1 Day",    cost:88,   sellingPrice:102  },
+    { id:"9mb-200mb",  size:"200MB", validity:"3 Days",   cost:148,  sellingPrice:172  },
+    { id:"9mb-500mb",  size:"500MB", validity:"7 Days",   cost:255,  sellingPrice:295  },
+    { id:"9mb-1gb",    size:"1GB",   validity:"30 Days",  cost:255,  sellingPrice:295  },
+    { id:"9mb-2gb",    size:"2GB",   validity:"30 Days",  cost:455,  sellingPrice:525  },
+    { id:"9mb-3gb",    size:"3GB",   validity:"30 Days",  cost:660,  sellingPrice:760  },
+    { id:"9mb-5gb",    size:"5GB",   validity:"30 Days",  cost:1080, sellingPrice:1240 },
+    { id:"9mb-10gb",   size:"10GB",  validity:"30 Days",  cost:2050, sellingPrice:2350 },
+    { id:"9mb-20gb",   size:"20GB",  validity:"30 Days",  cost:3400, sellingPrice:3900 },
+  ],
+};
 
 const DEFAULT_AIRTIME = {
   MTN:  { discount:3 },
@@ -84,103 +121,61 @@ const DEFAULT_AIRTIME = {
 };
 
 export default function AdminPricing() {
-  const [activeTab,   setActiveTab]   = useState("data");
-  const [network,     setNetwork]     = useState("MTN");
-  const [dataPlans,   setDataPlans]   = useState({});   // { MTN: [{...plan, sellingPrice}], ... }
-  const [airtime,     setAirtime]     = useState(DEFAULT_AIRTIME);
-  const [loading,     setLoading]     = useState(true);
-  const [syncing,     setSyncing]     = useState(false);
-  const [syncMsg,     setSyncMsg]     = useState("");
-  const [saving,      setSaving]      = useState(false);
-  const [toast,       setToast]       = useState("");
+  const [activeTab,  setActiveTab]  = useState("data");
+  const [network,    setNetwork]    = useState("MTN");
+  const [dataPlans,  setDataPlans]  = useState(DEFAULT_DATA_PLANS);
+  const [airtime,    setAirtime]    = useState(DEFAULT_AIRTIME);
+  const [loading,    setLoading]    = useState(true);
+  const [saving,     setSaving]     = useState(false);
+  const [toast,      setToast]      = useState(null);
 
-  // Load saved prices from Firestore
   useEffect(() => {
     const load = async () => {
       try {
-        const [airtimeSnap] = await Promise.all([
+        const [airtimeSnap, ...netSnaps] = await Promise.all([
           getDoc(doc(db, "pricing", "airtime")),
+          ...NETWORKS.map(n => getDoc(doc(db, "pricing", `data_${n.code}`))),
         ]);
         if (airtimeSnap.exists()) setAirtime(airtimeSnap.data());
-      } catch (err) {
-        console.error("Failed to load airtime pricing:", err);
-      }
 
-      // Load plans for current network
-      await loadPlansForNetwork("MTN");
+        const loaded = {};
+        NETWORKS.forEach((n, i) => {
+          const snap = netSnaps[i];
+          if (snap.exists()) {
+            const saved = snap.data();
+            // Merge saved selling prices into default plans
+            loaded[n.code] = DEFAULT_DATA_PLANS[n.code].map(p => ({
+              ...p,
+              sellingPrice: saved[p.id]?.sellingPrice ?? p.sellingPrice,
+              cost:         saved[p.id]?.cost         ?? p.cost,
+            }));
+          }
+        });
+        if (Object.keys(loaded).length) {
+          setDataPlans(prev => ({ ...prev, ...loaded }));
+        }
+      } catch (err) {
+        console.error("Failed to load pricing:", err);
+      }
       setLoading(false);
     };
     load();
   }, []);
-
-  const loadPlansForNetwork = useCallback(async (netCode) => {
-    // Check if we already have plans for this network
-    setDataPlans(prev => {
-      if (prev[netCode]) return prev; // already loaded
-      return prev;
-    });
-
-    try {
-      // Fetch live plans from Pointly
-      const networkName = NET_NAME_MAP[netCode];
-      const netRes = await fetch(`${POINTLY_API_BASE}/vtu/networks`, {
-        headers: { "X-API-Key": POINTLY_API_KEY }
-      });
-      const netData = await netRes.json();
-      const netObj = netData.data?.find(n =>
-        n.network?.toLowerCase() === networkName?.toLowerCase()
-      );
-      if (!netObj) return;
-
-      const plansRes = await fetch(
-        `${POINTLY_API_BASE}/vtu/data-plans?network=${encodeURIComponent(netObj.id || netObj.network)}`,
-        { headers: { "X-API-Key": POINTLY_API_KEY } }
-      );
-      const plansData = await plansRes.json();
-      if (!plansData.success || !plansData.data?.length) return;
-
-      // Load saved selling prices from Firestore
-      const savedSnap = await getDoc(doc(db, "pricing", `data_${netCode}`));
-      const savedPrices = savedSnap.exists() ? savedSnap.data() : {};
-
-      const merged = plansData.data.map(p => ({
-        ...p,
-        costPrice:    Number(p.price || p.amount || 0),
-        sellingPrice: savedPrices[p.id]?.sellingPrice
-          ?? Math.ceil(Number(p.price || p.amount || 0) * 1.05),
-      }));
-
-      setDataPlans(prev => ({ ...prev, [netCode]: merged }));
-    } catch (err) {
-      console.error("loadPlansForNetwork error:", err);
-    }
-  }, []);
-
-  const handleNetworkTab = async (code) => {
-    setNetwork(code);
-    if (!dataPlans[code]) {
-      setSyncMsg("Loading plans...");
-      await loadPlansForNetwork(code);
-      setSyncMsg("");
-    }
-  };
-
-  const handleSyncNetwork = async () => {
-    setSyncing(true);
-    setSyncMsg("Fetching live plans from Pointly...");
-    // Force reload by clearing the network's plans
-    setDataPlans(prev => { const n = {...prev}; delete n[network]; return n; });
-    await loadPlansForNetwork(network);
-    setSyncMsg(`Synced ${dataPlans[network]?.length || 0} plans`);
-    setTimeout(() => setSyncMsg(""), 3000);
-    setSyncing(false);
-  };
 
   const updateSellingPrice = (netCode, planId, val) => {
     setDataPlans(prev => ({
       ...prev,
       [netCode]: prev[netCode].map(p =>
         p.id === planId ? { ...p, sellingPrice: parseInt(val) || 0 } : p
+      )
+    }));
+  };
+
+  const updateCost = (netCode, planId, val) => {
+    setDataPlans(prev => ({
+      ...prev,
+      [netCode]: prev[netCode].map(p =>
+        p.id === planId ? { ...p, cost: parseInt(val) || 0 } : p
       )
     }));
   };
@@ -192,35 +187,33 @@ export default function AdminPricing() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      // Save each network's selling prices as { [planId]: { sellingPrice } }
-      const saveOps = Object.entries(dataPlans).map(([netCode, plans]) => {
+      const saveOps = NETWORKS.map(n => {
         const priceMap = {};
-        plans.forEach(p => { priceMap[p.id] = { sellingPrice: p.sellingPrice, size: p.size || p.name, validity: p.validity || p.duration || "" }; });
-        return setDoc(doc(db, "pricing", `data_${netCode}`), priceMap);
+        (dataPlans[n.code] || []).forEach(p => {
+          priceMap[p.id] = { sellingPrice: p.sellingPrice, cost: p.cost, size: p.size, validity: p.validity };
+        });
+        return setDoc(doc(db, "pricing", `data_${n.code}`), priceMap);
       });
       saveOps.push(setDoc(doc(db, "pricing", "airtime"), airtime));
       await Promise.all(saveOps);
-      setToast("Prices saved! ClassicSwift app updated.");
-      setTimeout(() => setToast(""), 3000);
+      setToast({ msg: "Prices saved! ClassicSwift app updated.", err: false });
     } catch (err) {
       console.error(err);
-      setToast("Save failed. Please try again.");
-      setTimeout(() => setToast(""), 3000);
+      setToast({ msg: "Save failed. Please try again.", err: true });
     }
     setSaving(false);
+    setTimeout(() => setToast(null), 3000);
   };
 
-  const currentNet = NETWORKS.find(n => n.code === network);
+  const currentNet   = NETWORKS.find(n => n.code === network);
   const currentPlans = dataPlans[network] || [];
 
-  if (loading) {
-    return (
-      <Layout title="Pricing Manager" subtitle="Edit airtime discounts and data plan prices">
-        <style>{STYLES}</style>
-        <div className="ap-loading"><div className="ap-load-spinner"/></div>
-      </Layout>
-    );
-  }
+  if (loading) return (
+    <Layout title="Pricing Manager" subtitle="Edit airtime discounts and data plan prices">
+      <style>{STYLES}</style>
+      <div className="ap-loading"><div className="ap-load-spinner"/></div>
+    </Layout>
+  );
 
   return (
     <Layout title="Pricing Manager" subtitle="Edit airtime discounts and data plan prices">
@@ -233,12 +226,10 @@ export default function AdminPricing() {
 
       {activeTab === "data" && (
         <>
-          {/* Network selector */}
           <div className="ap-net-row">
             {NETWORKS.map(n => (
-              <button key={n.code}
-                className="ap-net-btn"
-                onClick={() => handleNetworkTab(n.code)}
+              <button key={n.code} className="ap-net-btn"
+                onClick={() => setNetwork(n.code)}
                 style={{
                   borderColor: network===n.code ? n.color : "#2A2D3A",
                   background:  network===n.code ? `${n.color}22` : "#1A1D27",
@@ -246,63 +237,43 @@ export default function AdminPricing() {
                 }}>
                 <div className="ap-net-badge" style={{background:n.color}}>{n.code}</div>
                 {n.name}
-                {dataPlans[n.code] && <span style={{fontSize:11,opacity:.6}}>({dataPlans[n.code].length})</span>}
               </button>
             ))}
           </div>
 
-          {/* Network header + sync */}
           <div className="ap-network-header">
             <div className="ap-network-badge" style={{background:currentNet?.color}}>{network}</div>
             <div className="ap-network-name">{currentNet?.name} Data Plans</div>
           </div>
 
-          <div className="ap-sync-bar">
-            <div className="ap-sync-info">
-              {syncMsg || (currentPlans.length > 0
-                ? `${currentPlans.length} plans loaded from Pointly API`
-                : "Click Sync to load live plans from Pointly")}
-            </div>
-            <button className="ap-sync-btn" onClick={handleSyncNetwork} disabled={syncing}>
-              {syncing ? <><div className="ap-sync-spinner"/>Syncing...</> : "↻ Sync Plans"}
-            </button>
+          <div className="ap-plan-count">{currentPlans.length} plans — edit cost and selling price</div>
+          <div className="ap-plans-grid">
+            {currentPlans.map(plan => {
+              const margin = plan.sellingPrice - plan.cost;
+              const pct    = plan.cost > 0 ? ((margin / plan.cost) * 100).toFixed(1) : "0.0";
+              return (
+                <div className="ap-plan-card" key={plan.id}>
+                  <div className="ap-plan-size">{plan.size}</div>
+                  <div className="ap-plan-validity">{plan.validity}</div>
+                  <div className="ap-plan-field">
+                    <div className="ap-plan-label">Cost Price (₦)</div>
+                    <input className="ap-plan-input" type="number"
+                      value={plan.cost}
+                      onChange={e => updateCost(network, plan.id, e.target.value)}/>
+                  </div>
+                  <div className="ap-plan-field">
+                    <div className="ap-plan-label">Selling Price (₦)</div>
+                    <input className="ap-plan-input" type="number"
+                      value={plan.sellingPrice}
+                      onChange={e => updateSellingPrice(network, plan.id, e.target.value)}/>
+                  </div>
+                  <div className={`ap-plan-margin${margin < 0 ? " neg" : ""}`}>
+                    Margin: ₦{margin} ({pct}%)
+                  </div>
+                </div>
+              );
+            })}
           </div>
-
-          {currentPlans.length === 0 ? (
-            <div className="ap-empty">No plans loaded yet — click Sync Plans above</div>
-          ) : (
-            <>
-              <div className="ap-plan-count">Showing {currentPlans.length} plans — edit selling price for each</div>
-              <div className="ap-plans-grid">
-                {currentPlans.map(plan => {
-                  const cost   = plan.costPrice || 0;
-                  const sell   = plan.sellingPrice || 0;
-                  const margin = sell - cost;
-                  const pct    = cost > 0 ? ((margin / cost) * 100).toFixed(1) : "0.0";
-                  return (
-                    <div className="ap-plan-card" key={plan.id}>
-                      <div className="ap-plan-size">{plan.size || plan.name}</div>
-                      <div className="ap-plan-validity">{plan.validity || plan.duration || "—"}</div>
-                      <div className="ap-plan-field">
-                        <div className="ap-plan-label">Cost (Pointly Price ₦)</div>
-                        <input className="ap-plan-input" type="number" readOnly
-                          value={cost} style={{color:"#6b7280",cursor:"not-allowed"}}/>
-                      </div>
-                      <div className="ap-plan-field">
-                        <div className="ap-plan-label">Your Selling Price (₦)</div>
-                        <input className="ap-plan-input" type="number"
-                          value={sell}
-                          onChange={e => updateSellingPrice(network, plan.id, e.target.value)}/>
-                      </div>
-                      <div className={`ap-plan-margin${margin < 0 ? " neg" : ""}`}>
-                        Margin: ₦{margin} ({pct}%)
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          )}
         </>
       )}
 
@@ -336,11 +307,13 @@ export default function AdminPricing() {
       </div>
 
       {toast && (
-        <div className="ap-toast">
+        <div className={`ap-toast${toast.err?" err":""}`}>
           <div className="ap-toast-icon">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              {toast.err ? <><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></> : <polyline points="20 6 9 17 4 12"/>}
+            </svg>
           </div>
-          <span className="ap-toast-text">{toast}</span>
+          <span className="ap-toast-text">{toast.msg}</span>
         </div>
       )}
     </Layout>

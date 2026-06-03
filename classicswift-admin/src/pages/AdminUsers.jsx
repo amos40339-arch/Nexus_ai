@@ -34,7 +34,7 @@ const STYLES = `
   .au-empty { text-align:center; padding:60px 20px; color:#6b7280; font-size:13.5px; }
 `;
 
-const getBalance = (u) => u.balance ?? u.walletBalance ?? 0;
+const getBalance = (u) => Number(u.balance ?? u.walletBalance ?? 0) || 0;
 
 export default function AdminUsers() {
   const [users,   setUsers]   = useState([]);

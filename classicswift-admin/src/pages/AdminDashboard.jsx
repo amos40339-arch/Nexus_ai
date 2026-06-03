@@ -45,7 +45,7 @@ export default function AdminDashboard() {
     return d.toLocaleString("en-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
   };
 
-  const getBalance = (u) => u.balance ?? u.walletBalance ?? 0;
+  const getBalance = (u) => Number(u.balance ?? u.walletBalance ?? 0) || 0;
 
   const NET_COLORS = { MTN:"#FFC107", AIR:"#EF4444", GLO:"#10B881", "9MB":"#6A00DF" };
 
