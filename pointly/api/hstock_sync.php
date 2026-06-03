@@ -358,6 +358,13 @@ if (!empty($_GET['list_categories'])) {
         if ($parentName === '') continue;
         if (isBlockedParentCat($parentName)) { $blocked[] = $parentName; continue; }
         $parsed[] = $parentName;
+        $subs = $group['subcategories'] ?? $group['sub_categories'] ?? [];
+        if (!empty($subs) && is_array($subs)) {
+            foreach ($subs as $sub) {
+                $subName = is_string($sub) ? $sub : (string)($sub['name'] ?? $sub['category'] ?? '');
+                if ($subName !== '') $parsed[] = $subName;
+            }
+        }
     }
     echo json_encode([
         'success'            => true,
