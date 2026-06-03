@@ -6,7 +6,7 @@
 // ============================================================
 
 define('SYNC_TOKEN', 'pL9mK2xQ7nR4wB8vT3');
-define('BATCH_SIZE', 50);
+define('BATCH_SIZE', 10);
 
 $token = $_GET['token'] ?? '';
 if (!hash_equals(SYNC_TOKEN, $token)) {
@@ -210,8 +210,8 @@ async function startSync() {
       await new Promise(r => setTimeout(r, 1500));
 
     } catch (e) {
-      log(`Batch ${batchNum} failed: ${e.message} — retrying in 10s...`, 'err');
-      await new Promise(r => setTimeout(r, 10000));
+      log(`Batch ${batchNum} failed: ${e.message} — retrying in 20s...`, 'err');
+      await new Promise(r => setTimeout(r, 20000));
       // Don't advance offset — retry same batch
     }
   }
