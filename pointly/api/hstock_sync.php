@@ -6,7 +6,7 @@
 
 declare(strict_types=1);
 
-set_time_limit(1800); // 30 minutes — category-by-category can take longer
+set_time_limit(1800);
 ini_set('max_execution_time', '1800');
 
 define('HSTOCK_API_URL',  'https://hstockplus.com/api/v2');
@@ -28,6 +28,11 @@ if (!hash_equals(SYNC_TOKEN, $token)) {
 }
 
 require_once __DIR__ . '/config.php';
+
+// ── Single-category mode: ?token=...&category=Gmail ──────────────────────────
+// Use this to sync one category at a time and avoid timeouts on shared hosting.
+// Run each category separately, e.g. via cron or manually.
+$singleCategory = trim($_GET['category'] ?? $_POST['category'] ?? '');
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -323,6 +328,36 @@ $stats = [
     'per_category'      => [],
     'errors'            => [],
 ];
+
+// ── Single-category shortcut (avoids timeout on shared hosting) ──────────────
+// Usage: ?token=pL9mK2xQ7nR4wB8vT3&category=Gmail
+// Run each category separately via the list returned by ?token=...&list_categories=1
+if ($singleCategory !== '') {
+    $globalSeen = [];
+    $catItems   = fetchCategory($singleCategory);
+    foreach ($catItems as $p) {
+        $pid = (string) ($p['id'] ?? '');
+        if ($pid === '' || isset($globalSeen[$pid])) continue;
+        $globalSeen[$pid] = true;
+        $stats['products_fetched']++;
+        try { processItem($conn, $p, $stats); } catch (Throwable $e) { $stats['errors'][] = $e->getMessage(); }
+    }
+    $stats['per_category'][$singleCategory] = $stats['products_fetched'];
+    echo json_encode([
+        'success'  => true,
+        'message'  => 'Single-category sync complete: ' . $singleCategory,
+        'stats'    => $stats,
+    ], JSON_PRETTY_PRINT);
+    exit;
+}
+
+// ── List-categories mode: ?token=...&list_categories=1 ───────────────────────
+// Returns all hstock categories so you know what to pass as &category=
+if (!empty($_GET['list_categories'])) {
+    $catResponse = hstock_call(['action' => 'categories', 'entityType' => 'product']);
+    echo json_encode(['success' => true, 'response' => $catResponse], JSON_PRETTY_PRINT);
+    exit;
+}
 
 // ── Step 1: Fetch all available categories from hstock ───────────────────────
 $catResponse      = hstock_call(['action' => 'categories', 'entityType' => 'product']);
