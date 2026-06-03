@@ -224,10 +224,9 @@ function isSmmService(string $categoryName, string $name): bool
 {
     $haystack = strtolower($categoryName . ' ' . $name);
     $smmPatterns = [
-        'followers', 'likes', 'views', 'subscribers', 'comments',
-        'retweets', 'impressions', 'reactions', 'shares', 'plays',
-        'streams', 'reposts', 'saves', 'story views', 'reel views',
-        'smm', 'growth service', 'boost service',
+        'followers', 'likes', 'story views', 'reel views',
+        'retweets', 'impressions', 'reposts',
+        'smm panel', 'growth service', 'boost service',
     ];
     foreach ($smmPatterns as $pattern) {
         if (preg_match('/\b' . preg_quote($pattern, '/') . '\b/i', $haystack)) return true;
@@ -408,9 +407,17 @@ if (!isset($catResponse['error'])) {
         // Skip entire SMM / ad-tool parent categories
         if (isBlockedParentCat($parentName)) continue;
 
-        // hstock products API is queried by PARENT category name (e.g. "Accounts", "Email")
-        // not subcategory names — passing subcategories returns 0 products
+        // Add parent category name
         $hstockCategories[] = $parentName;
+
+        // Also add each subcategory name — they often return additional products
+        $subs = $group['subcategories'] ?? $group['sub_categories'] ?? [];
+        if (!empty($subs) && is_array($subs)) {
+            foreach ($subs as $sub) {
+                $subName = is_string($sub) ? $sub : (string)($sub['name'] ?? $sub['category'] ?? '');
+                if ($subName !== '') $hstockCategories[] = $subName;
+            }
+        }
     }
     $hstockCategories = array_values(array_unique($hstockCategories));
 }
