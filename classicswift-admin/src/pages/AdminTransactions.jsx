@@ -80,8 +80,9 @@ const TAB_LABELS = { All:"All", airtime:"Airtime", data:"Data", wallet_fund:"Wal
 
 function ManualCreditTool({ users }) {
   const [txnId,    setTxnId]    = useState("");
+  const [txRef,    setTxRef]    = useState("");
   const [userId,   setUserId]   = useState("");
-  const [verifying, setVerifying] = useState("");
+  const [verifying, setVerifying] = useState(false);
   const [crediting, setCrediting] = useState(false);
   const [result,   setResult]   = useState(null);
   const [verified, setVerified] = useState(null);
@@ -91,12 +92,15 @@ function ManualCreditTool({ users }) {
   }));
 
   const handleVerify = async () => {
-    if (!txnId.trim()) return;
+    if (!txnId.trim() && !txRef.trim()) return;
     setVerifying(true);
     setResult(null);
     setVerified(null);
     try {
-      const res  = await fetch(`${FLW_PROXY}&transaction_id=${encodeURIComponent(txnId.trim())}`);
+      const params = txnId.trim()
+        ? `&transaction_id=${encodeURIComponent(txnId.trim())}`
+        : `&tx_ref=${encodeURIComponent(txRef.trim())}`;
+      const res  = await fetch(`${FLW_PROXY}${params}`);
       const data = await res.json();
       if (data.status === "success" && data.data) {
         const d = data.data;
@@ -173,9 +177,11 @@ function ManualCreditTool({ users }) {
 
       <div className="mc-row">
         <div className="mc-field">
-          <div className="mc-label">Flutterwave Transaction ID</div>
-          <input className="mc-input" placeholder="e.g. 12345678"
-            value={txnId} onChange={e => setTxnId(e.target.value)} />
+          <div className="mc-label">Transaction ID <span style={{color:"#4B5563",fontWeight:400}}>or</span> Reference</div>
+          <input className="mc-input" placeholder="Transaction ID (e.g. 12345678)"
+            value={txnId} onChange={e => { setTxnId(e.target.value); if(e.target.value) setTxRef(""); }} />
+          <input className="mc-input" placeholder="Reference (e.g. CS-1234567890-1234)" style={{marginTop:6}}
+            value={txRef} onChange={e => { setTxRef(e.target.value); if(e.target.value) setTxnId(""); }} />
         </div>
         <div className="mc-field">
           <div className="mc-label">Select User</div>
@@ -191,7 +197,7 @@ function ManualCreditTool({ users }) {
 
       <div className="mc-actions">
         <button className="mc-btn mc-btn-verify" onClick={handleVerify}
-          disabled={!txnId.trim() || verifying}>
+          disabled={(!txnId.trim() && !txRef.trim()) || verifying}>
           {verifying ? "Verifying..." : "🔍 Verify Payment"}
         </button>
         {verified && (
