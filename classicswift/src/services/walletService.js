@@ -16,6 +16,21 @@ export const getBalance = async (uid) => {
 };
 
 // Alias used by AirtimeConfirm, DataConfirm pages
+export const fundWallet = async (uid, amount) => {
+  try {
+    const snap = await getDoc(doc(db, "users", uid));
+    if (!snap.exists()) return { success: false, error: "User not found" };
+    const data = snap.data();
+    const current = data.balance ?? data.walletBalance ?? 0;
+    const newBalance = current + Number(amount);
+    await updateDoc(doc(db, "users", uid), { balance: newBalance, walletBalance: newBalance });
+    return { success: true, newBalance };
+  } catch (err) {
+    console.error("fundWallet error:", err);
+    return { success: false, error: err.message };
+  }
+};
+
 export const deductWallet = async (uid, amount) => {
   return deductBalance(uid, amount);
 };

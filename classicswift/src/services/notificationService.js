@@ -35,6 +35,16 @@ export const getNotifications = async (uid, limitCount = 30) => {
   }
 };
 
+export const markAsRead = async (notificationId) => {
+  try {
+    await updateDoc(doc(db, "notifications", notificationId), { read: true });
+    return { success: true };
+  } catch (err) {
+    console.error("markAsRead error:", err);
+    return { success: false };
+  }
+};
+
 export const markAllRead = async (uid) => {
   try {
     const q = query(
