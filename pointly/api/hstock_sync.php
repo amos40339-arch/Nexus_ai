@@ -355,16 +355,9 @@ if (!empty($_GET['list_categories'])) {
     foreach ($rawCats as $group) {
         if (!is_array($group)) continue;
         $parentName = (string) ($group['category'] ?? $group['name'] ?? '');
-        if ($parentName !== '' && isBlockedParentCat($parentName)) {
-            $blocked[] = $parentName; continue;
-        }
-        $subs = $group['subcategories'] ?? $group['sub_categories'] ?? [];
-        if (!empty($subs) && is_array($subs)) {
-            foreach ($subs as $sub) {
-                $n = is_string($sub) ? $sub : ($sub['name'] ?? '');
-                if ($n !== '') $parsed[] = $n;
-            }
-        } elseif ($parentName !== '') { $parsed[] = $parentName; }
+        if ($parentName === '') continue;
+        if (isBlockedParentCat($parentName)) { $blocked[] = $parentName; continue; }
+        $parsed[] = $parentName;
     }
     echo json_encode([
         'success'            => true,
@@ -410,27 +403,15 @@ if (!isset($catResponse['error'])) {
         if (!is_array($group)) continue;
 
         $parentName = (string) ($group['category'] ?? $group['name'] ?? '');
+        if ($parentName === '') continue;
 
         // Skip entire SMM / ad-tool parent categories
-        if ($parentName !== '' && isBlockedParentCat($parentName)) continue;
+        if (isBlockedParentCat($parentName)) continue;
 
-        // Subcategories are the actual fetch targets (e.g. "Instagram", "Gmail")
-        $subs = $group['subcategories'] ?? $group['sub_categories'] ?? [];
-        if (!empty($subs) && is_array($subs)) {
-            foreach ($subs as $sub) {
-                if (is_string($sub) && $sub !== '') {
-                    $hstockCategories[] = $sub;
-                } elseif (is_array($sub)) {
-                    $n = $sub['name'] ?? $sub['category'] ?? '';
-                    if ($n !== '') $hstockCategories[] = (string) $n;
-                }
-            }
-        } elseif ($parentName !== '') {
-            // No subcategories — use the parent name itself
-            $hstockCategories[] = $parentName;
-        }
+        // hstock products API is queried by PARENT category name (e.g. "Accounts", "Email")
+        // not subcategory names — passing subcategories returns 0 products
+        $hstockCategories[] = $parentName;
     }
-    // Deduplicate
     $hstockCategories = array_values(array_unique($hstockCategories));
 }
 
