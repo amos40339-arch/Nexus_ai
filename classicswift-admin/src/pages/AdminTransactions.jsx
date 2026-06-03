@@ -3,7 +3,7 @@ import { collection, getDocs, query, orderBy, limit, doc, updateDoc, addDoc, ser
 import { db } from "../firebase";
 import Layout from "../components/Layout";
 
-const FLW_PROXY = "https://classicswiftt.com/api/flw_verify.php?token=pL9mK2xQ7nR4wB8vT3";
+const FLW_PROXY = "https://pointly.com.ng/api/flw_verify.php?token=pL9mK2xQ7nR4wB8vT3";
 
 const STYLES = `
   @keyframes fadeInUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
