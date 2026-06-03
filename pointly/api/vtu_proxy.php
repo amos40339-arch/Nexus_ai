@@ -30,8 +30,13 @@ curl_setopt_array($ch, [
     CURLOPT_URL            => $url,
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_TIMEOUT        => 30,
-    CURLOPT_HTTPHEADER     => ['X-API-Key: ' . POINTLY_API_KEY],
     CURLOPT_SSL_VERIFYPEER => true,
+    CURLOPT_HTTPHEADER     => [
+        'X-API-Key: ' . POINTLY_API_KEY,
+        'Origin: https://classicswiftt.com',
+        'Referer: https://classicswiftt.com/',
+        'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+    ],
 ]);
 $response = curl_exec($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
