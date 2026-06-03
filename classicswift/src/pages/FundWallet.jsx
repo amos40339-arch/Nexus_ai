@@ -134,7 +134,7 @@ async function processConfirmedPayment({ uid, rawAmt, fee, txRef, transactionId,
     },
   });
   try {
-    await sendTransactionNotification(uid, { type: "wallet_fund", amount: rawAmt, status: "success" });
+    await sendTransactionNotification(uid, "wallet_fund", rawAmt, "Wallet", "success");
   } catch(_) {}
   localStorage.setItem("balanceUpdated", Date.now().toString());
 }
