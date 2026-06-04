@@ -4,6 +4,55 @@ import { useNavigate } from "react-router-dom";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
 
+// Default plans shown if both API and cache fail
+const DEFAULT_PLANS = {
+  MTN: [
+    { id:"mtn-50mb",  data_size:"50MB",  validity:"1 Day",   price:60,   category:"SME" },
+    { id:"mtn-100mb", data_size:"100MB", validity:"1 Day",   price:110,  category:"SME" },
+    { id:"mtn-200mb", data_size:"200MB", validity:"3 Days",  price:185,  category:"SME" },
+    { id:"mtn-500mb", data_size:"500MB", validity:"7 Days",  price:320,  category:"SME" },
+    { id:"mtn-1gb",   data_size:"1GB",   validity:"30 Days", price:310,  category:"SME" },
+    { id:"mtn-2gb",   data_size:"2GB",   validity:"30 Days", price:550,  category:"SME" },
+    { id:"mtn-3gb",   data_size:"3GB",   validity:"30 Days", price:800,  category:"SME" },
+    { id:"mtn-5gb",   data_size:"5GB",   validity:"30 Days", price:1300, category:"SME" },
+    { id:"mtn-10gb",  data_size:"10GB",  validity:"30 Days", price:2500, category:"SME" },
+    { id:"mtn-20gb",  data_size:"20GB",  validity:"30 Days", price:4300, category:"SME" },
+  ],
+  AIR: [
+    { id:"air-100mb", data_size:"100MB", validity:"1 Day",   price:105,  category:"SME" },
+    { id:"air-200mb", data_size:"200MB", validity:"3 Days",  price:175,  category:"SME" },
+    { id:"air-500mb", data_size:"500MB", validity:"7 Days",  price:300,  category:"SME" },
+    { id:"air-1gb",   data_size:"1GB",   validity:"30 Days", price:300,  category:"SME" },
+    { id:"air-2gb",   data_size:"2GB",   validity:"30 Days", price:530,  category:"SME" },
+    { id:"air-3gb",   data_size:"3GB",   validity:"30 Days", price:780,  category:"SME" },
+    { id:"air-5gb",   data_size:"5GB",   validity:"30 Days", price:1250, category:"SME" },
+    { id:"air-10gb",  data_size:"10GB",  validity:"30 Days", price:2400, category:"SME" },
+    { id:"air-20gb",  data_size:"20GB",  validity:"30 Days", price:4000, category:"SME" },
+  ],
+  GLO: [
+    { id:"glo-100mb", data_size:"100MB", validity:"1 Day",   price:100,  category:"SME" },
+    { id:"glo-200mb", data_size:"200MB", validity:"3 Days",  price:170,  category:"SME" },
+    { id:"glo-500mb", data_size:"500MB", validity:"7 Days",  price:290,  category:"SME" },
+    { id:"glo-1gb",   data_size:"1GB",   validity:"30 Days", price:290,  category:"SME" },
+    { id:"glo-2gb",   data_size:"2GB",   validity:"30 Days", price:520,  category:"SME" },
+    { id:"glo-3gb",   data_size:"3GB",   validity:"30 Days", price:750,  category:"SME" },
+    { id:"glo-5gb",   data_size:"5GB",   validity:"30 Days", price:1200, category:"SME" },
+    { id:"glo-10gb",  data_size:"10GB",  validity:"30 Days", price:2300, category:"SME" },
+    { id:"glo-20gb",  data_size:"20GB",  validity:"30 Days", price:3800, category:"SME" },
+  ],
+  "9MB": [
+    { id:"9mb-100mb", data_size:"100MB", validity:"1 Day",   price:102,  category:"SME" },
+    { id:"9mb-200mb", data_size:"200MB", validity:"3 Days",  price:172,  category:"SME" },
+    { id:"9mb-500mb", data_size:"500MB", validity:"7 Days",  price:295,  category:"SME" },
+    { id:"9mb-1gb",   data_size:"1GB",   validity:"30 Days", price:295,  category:"SME" },
+    { id:"9mb-2gb",   data_size:"2GB",   validity:"30 Days", price:525,  category:"SME" },
+    { id:"9mb-3gb",   data_size:"3GB",   validity:"30 Days", price:760,  category:"SME" },
+    { id:"9mb-5gb",   data_size:"5GB",   validity:"30 Days", price:1240, category:"SME" },
+    { id:"9mb-10gb",  data_size:"10GB",  validity:"30 Days", price:2350, category:"SME" },
+    { id:"9mb-20gb",  data_size:"20GB",  validity:"30 Days", price:3900, category:"SME" },
+  ],
+};
+
 const POINTLY_API_BASE = "https://www.pointly.com.ng/api/v2";
 const POINTLY_API_KEY  = "24c5fdb22b9a94a3f50c95dd4fa59c28a8ed79384ec78b7df933e192ee1b767e";
 
@@ -188,6 +237,43 @@ export default function Data() {
     const codeMap = { 1:"MTN", 2:"AIR", 3:"GLO", 4:"9MB" };
     const netCode = codeMap[network.id] || null;
 
+    const applyPlans = async (plans, netCode) => {
+      // Overlay admin selling prices if set
+      if (netCode) {
+        try {
+          const adminSnap = await getDoc(doc(db, "pricing", `data_${netCode}`));
+          if (adminSnap.exists()) {
+            const adminPrices = adminSnap.data();
+            plans.forEach(p => {
+              if (adminPrices[p.id]?.sellingPrice) p.price = adminPrices[p.id].sellingPrice;
+            });
+          }
+        } catch(_) {}
+      }
+      setAllPlans(plans);
+      const cats = [...new Set(plans.map(p => p.category).filter(Boolean))];
+      setCategories(cats);
+      setActiveTab(cats[0] || "");
+    };
+
+    const loadFromCacheOrDefault = async () => {
+      if (netCode) {
+        try {
+          const cacheSnap = await getDoc(doc(db, "plan_cache", netCode));
+          if (cacheSnap.exists()) {
+            const cached = Object.entries(cacheSnap.data()).map(([id, p]) => ({
+              id, data_size: p.data_size || id, validity: p.validity || "",
+              price: p.price || 0, category: p.category || "SME",
+            }));
+            if (cached.length) { await applyPlans(cached, netCode); return; }
+          }
+        } catch(_) {}
+      }
+      // Last resort: built-in defaults
+      const defaults = DEFAULT_PLANS[netCode] || DEFAULT_PLANS.MTN;
+      await applyPlans(defaults, netCode);
+    };
+
     fetch(`${POINTLY_API_BASE}/vtu/data-plans?network_id=${network.id}&network=${encodeURIComponent(network.network)}&limit=200`, {
       headers: { "X-API-Key": POINTLY_API_KEY }
     })
@@ -195,32 +281,23 @@ export default function Data() {
       .then(async data => {
         const plans = extractPlans(data);
         if (plans.length) {
-          // Cache plans to Firestore so AdminPricing can read them
+          // Cache to Firestore so AdminPricing + fallback can use it
           if (netCode) {
             try {
               const cacheDoc = {};
               plans.forEach(p => { cacheDoc[p.id] = { data_size: p.data_size, validity: p.validity, price: p.price, category: p.category || "" }; });
               await setDoc(doc(db, "plan_cache", netCode), cacheDoc, { merge: true });
-
-              // Overlay admin selling prices if set
-              const adminSnap = await getDoc(doc(db, "pricing", `data_${netCode}`));
-              if (adminSnap.exists()) {
-                const adminPrices = adminSnap.data();
-                plans.forEach(p => {
-                  if (adminPrices[p.id]?.sellingPrice) p.price = adminPrices[p.id].sellingPrice;
-                });
-              }
             } catch(_) {}
           }
-          setAllPlans(plans);
-          const cats = [...new Set(plans.map(p => p.category).filter(Boolean))];
-          setCategories(cats);
-          setActiveTab(cats[0] || "");
+          await applyPlans(plans, netCode);
         } else {
-          setPlansError("No data plans available for this network.");
+          await loadFromCacheOrDefault();
         }
       })
-      .catch(() => setPlansError("Failed to load data plans. Please try again."))
+      .catch(async () => {
+        // API failed — try Firestore cache, then defaults
+        await loadFromCacheOrDefault();
+      })
       .finally(() => setPlansLoading(false));
   }, [network]);
 
