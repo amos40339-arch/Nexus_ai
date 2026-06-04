@@ -189,7 +189,7 @@ export default function Airtime() {
 
   const validate = () => {
     const e = {};
-    if (!phone || phone.length < 10) e.phone = "Enter a valid phone number";
+    if (!phone || phone.replace(/\D/g,"").length < 10) e.phone = "Enter a valid phone number";
     if (!finalAmount) e.amount = "Select or enter an amount";
     if (!network) e.network = "Select a network";
     return e;

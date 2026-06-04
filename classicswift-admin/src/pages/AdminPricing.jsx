@@ -181,13 +181,13 @@ export default function AdminPricing() {
   const updateSelling = (code, id, val) =>
     setDataPlans(prev => ({
       ...prev,
-      [code]: prev[code].map(p => p.id === id ? { ...p, sellingPrice: parseInt(val)||0 } : p)
+      [code]: prev[code].map(p => p.id === id ? { ...p, sellingPrice: Math.round(parseFloat(val))||0 } : p)
     }));
 
   const updateCost = (code, id, val) =>
     setDataPlans(prev => ({
       ...prev,
-      [code]: prev[code].map(p => p.id === id ? { ...p, cost: parseInt(val)||0 } : p)
+      [code]: prev[code].map(p => p.id === id ? { ...p, cost: Math.round(parseFloat(val))||0 } : p)
     }));
 
   const updateAirtime = (code, val) =>

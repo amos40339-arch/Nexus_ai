@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { collection, getDocs, query, orderBy, limit, doc, updateDoc, addDoc, serverTimestamp, getDoc } from "firebase/firestore";
+import { collection, getDocs, query, orderBy, limit, doc, updateDoc, addDoc, serverTimestamp, getDoc, increment } from "firebase/firestore";
 import { db } from "../firebase";
 import Layout from "../components/Layout";
 
@@ -138,11 +138,12 @@ function ManualCreditTool({ users }) {
       const userSnap = await getDoc(userRef);
       if (!userSnap.exists()) { setResult({ type: "err", msg: "User not found in Firebase" }); setCrediting(false); return; }
 
-      const currentBalance = userSnap.data().balance || userSnap.data().walletBalance || 0;
       const creditAmount   = Number(verified.amount);
-      const newBalance     = currentBalance + creditAmount;
 
-      await updateDoc(userRef, { balance: newBalance, walletBalance: newBalance });
+      await updateDoc(userRef, {
+        balance:       increment(creditAmount),
+        walletBalance: increment(creditAmount),
+      });
 
       await addDoc(collection(db, "transactions"), {
         userId:    userId,
@@ -159,7 +160,7 @@ function ManualCreditTool({ users }) {
 
       setResult({
         type: "ok",
-        msg:  `✓ Wallet credited ₦${creditAmount.toLocaleString()}. New balance: ₦${newBalance.toLocaleString()}`
+        msg:  `✓ Wallet credited ₦${creditAmount.toLocaleString()} successfully.`
       });
       setVerified(null);
       setTxnId("");
@@ -261,7 +262,7 @@ export default function AdminTransactions() {
     return matchTab && matchSearch;
   });
 
-  const totalVol = txns.filter(t=>t.status==="success").reduce((s,t)=>s+(t.amount||0),0);
+  const totalVol = txns.filter(t=>t.status==="success"&&t.type!=="wallet_fund").reduce((s,t)=>s+(t.amount||0),0);
   const success  = txns.filter(t=>t.status==="success").length;
   const failed   = txns.filter(t=>t.status==="failed").length;
 
