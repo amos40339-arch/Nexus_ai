@@ -380,16 +380,8 @@ export default function Dashboard() {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (u) {
-        const hasSession = sessionStorage.getItem("cs_session");
-        if (!hasSession) {
-          const isOAuth = u.providerData?.some(p => p.providerId !== "password");
-          if (isOAuth) {
-            sessionStorage.setItem("cs_session", "true");
-          } else {
-            await signOut(auth);
-            navigate("/login");
-            return;
-          }
+        if (!sessionStorage.getItem("cs_session")) {
+          sessionStorage.setItem("cs_session", "true");
         }
         setUser(u);
         setAuthReady(true);

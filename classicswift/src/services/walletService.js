@@ -18,13 +18,13 @@ export const getBalance = async (uid) => {
 // Alias used by AirtimeConfirm, DataConfirm pages
 export const fundWallet = async (uid, amount) => {
   try {
-    const snap = await getDoc(doc(db, "users", uid));
-    if (!snap.exists()) return { success: false, error: "User not found" };
-    const data = snap.data();
-    const current = data.balance ?? data.walletBalance ?? 0;
-    const newBalance = current + Number(amount);
-    await updateDoc(doc(db, "users", uid), { balance: newBalance, walletBalance: newBalance });
-    return { success: true, newBalance };
+    const amt = Number(amount);
+    if (!amt || amt <= 0) return { success: false, error: "Invalid amount" };
+    await updateDoc(doc(db, "users", uid), {
+      balance: increment(amt),
+      walletBalance: increment(amt),
+    });
+    return { success: true };
   } catch (err) {
     console.error("fundWallet error:", err);
     return { success: false, error: err.message };
@@ -37,14 +37,17 @@ export const deductWallet = async (uid, amount) => {
 
 export const deductBalance = async (uid, amount) => {
   try {
+    const amt = Number(amount);
     const snap = await getDoc(doc(db, "users", uid));
     if (!snap.exists()) return { success: false, error: "User not found" };
     const data = snap.data();
-    const current = data.balance ?? data.walletBalance ?? 0;
-    if (current < amount) return { success: false, error: "Insufficient balance" };
-    const newBalance = current - amount;
-    await updateDoc(doc(db, "users", uid), { balance: newBalance, walletBalance: newBalance });
-    return { success: true, newBalance };
+    const current = Number(data.balance ?? data.walletBalance ?? 0) || 0;
+    if (current < amt) return { success: false, error: "Insufficient balance" };
+    await updateDoc(doc(db, "users", uid), {
+      balance: increment(-amt),
+      walletBalance: increment(-amt),
+    });
+    return { success: true, newBalance: current - amt };
   } catch (err) {
     console.error("deductBalance error:", err);
     return { success: false, error: err.message };

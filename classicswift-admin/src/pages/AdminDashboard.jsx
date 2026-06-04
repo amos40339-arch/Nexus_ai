@@ -21,7 +21,7 @@ export default function AdminDashboard() {
         const txnSnap = await getDocs(query(collection(db, "transactions"), orderBy("createdAt","desc"), limit(50)));
         const txnData = txnSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-        const rev    = txnData.filter(t=>t.status==="success").reduce((s,t)=>s+(t.amount||0),0);
+        const rev    = txnData.filter(t=>t.status==="success"&&t.type!=="wallet_fund").reduce((s,t)=>s+(t.amount||0),0);
         const failed = txnData.filter(t=>t.status==="failed").length;
         setStats({ users: usersData.length, revenue: rev, txns: txnData.length, failed });
         setTxns(txnData.slice(0,5));
@@ -123,7 +123,7 @@ export default function AdminDashboard() {
                 return <div className="ti" style={{background:NET_COLORS[nName]||"#10B881"}}>{nName}</div>;
               })()}
               <div>
-                <div className="tn">{t.type==="wallet_fund"?"Wallet Funded":`${t.network||""} ${t.type||""}`}</div>
+                <div className="tn">{t.type==="wallet_fund"?"Wallet Funded":`${typeof t.network==='object'?(t.network?.name||t.network?.text||""):( t.network||"")} ${t.type||""}`}</div>
                 <div className="td">{fmtTime(t.createdAt)}</div>
                 <div className={`tbg ${t.status}`}>{t.status==="success"?"Successful":"Failed"}</div>
               </div>

@@ -92,7 +92,7 @@ export default function AdminUsers() {
           <div className="au-count">Showing {filtered.length} of {users.length} users</div>
           <div className="au-cards">
             {filtered.map((u,i) => (
-              <div className="au-card" key={i}>
+              <div className="au-card" key={u.id||i}>
                 <div className="au-card-top">
                   <div className="au-avatar">{(u.name||u.email||"U").charAt(0).toUpperCase()}</div>
                   <div>
