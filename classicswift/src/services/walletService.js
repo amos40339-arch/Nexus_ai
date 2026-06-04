@@ -6,8 +6,8 @@ export const getBalance = async (uid) => {
     const snap = await getDoc(doc(db, "users", uid));
     if (!snap.exists()) return { success: false, error: "User not found" };
     const data = snap.data();
-    const balance  = data.balance  ?? data.walletBalance ?? 0;
-    const cashback = data.cashback ?? 0;
+    const balance  = Number(data.balance  ?? data.walletBalance ?? 0) || 0;
+    const cashback = Number(data.cashback ?? 0) || 0;
     return { success: true, balance, cashback };
   } catch (err) {
     console.error("getBalance error:", err);
@@ -62,6 +62,6 @@ export const addCashback = async (uid, amount) => {
 };
 
 export const formatBalance = (amount) => {
-  if (amount === null || amount === undefined) return "0.00";
-  return Number(amount).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const n = Number(amount) || 0;
+  return n.toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };

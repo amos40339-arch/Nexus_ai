@@ -188,7 +188,7 @@ export default function Data() {
     const codeMap = { 1:"MTN", 2:"AIR", 3:"GLO", 4:"9MB" };
     const netCode = codeMap[network.id] || null;
 
-    fetch(`${POINTLY_API_BASE}/vtu/data-plans?network_id=${network.id}&limit=200`, {
+    fetch(`${POINTLY_API_BASE}/vtu/data-plans?network_id=${network.id}&network=${encodeURIComponent(network.network)}&limit=200`, {
       headers: { "X-API-Key": POINTLY_API_KEY }
     })
       .then(r => r.json())
